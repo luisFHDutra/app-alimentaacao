@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">AlimentaAção</string>
+
+    <!-- Login -->
+    <string name="login_title">Entrar</string>
+    <string name="login_google">Continuar com Google</string>
+
+    <!-- Tipos -->
+    <string name="choose_type_title">Quem é você?</string>
+    <string name="type_ong">ONG</string>
+    <string name="type_volunteer">Voluntário</string>
+
+    <!-- BottomNav -->
+    <string name="tab_solicitacoes">Solicitações</string>
+    <string name="tab_eventos">Eventos</string>
+    <string name="tab_mapa">Mapa</string>
+    <string name="tab_perfil">Perfil</string>
+
+    <!-- Outros -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancelar</string>
+
+    <!-- Google Sign-In (use o Web client ID do seu google-services.json) -->
+    <string name="default_web_client_id">REPLACE_WITH_CLIENT_ID.apps.googleusercontent.com</string>
+</resources>
