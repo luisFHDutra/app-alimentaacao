@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1037173800351",
+    "project_id": "alimentaacao-5a7ef",
+    "storage_bucket": "alimentaacao-5a7ef.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1037173800351:android:739935c6587c6d692091aa",
+        "android_client_info": {
+          "package_name": "com.example.alimentaacao"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1037173800351-oijf8b7gq7fji1h6l4f1aupf9ggfhai6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.alimentaacao",
+            "certificate_hash": "cd3ee1516d77c6b4ec0a103053addcefc3299bff"
+          }
+        },
+        {
+          "client_id": "1037173800351-1s4sb8jlunch7f7th909naonq6gs16jt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcDZgVi3QzVTwvziIHsl1d2eoqBDK_Fhc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1037173800351-1s4sb8jlunch7f7th909naonq6gs16jt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

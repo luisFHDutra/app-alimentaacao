@@ -18,6 +18,9 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        com.example.alimentaacao.data.firebase.Bootstrapper.ensureBaseCollections()
+                .addOnFailureListener(e -> android.util.Log.w("MainActivity", "ensureBaseCollections falhou", e));
+
         binding.bottomNav.setOnItemSelectedListener(item -> {
             Fragment f;
             int id = item.getItemId();
