@@ -1,4 +1,3 @@
 <resources>
-    <!-- Substitua pela SUA chave de API do Google Maps Platform -->
-    <string name="google_maps_key">REPLACE_WITH_YOUR_MAPS_KEY</string>
+    <string name="google_maps_key">AIzaSyA54ImaB2El7lILZuLSm86WD0kBRiRRacY</string>
 </resources>

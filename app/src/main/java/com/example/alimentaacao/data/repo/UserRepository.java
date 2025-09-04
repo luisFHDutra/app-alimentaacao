@@ -71,6 +71,9 @@ public class UserRepository {
             return;
         }
         User u = snap.toObject(User.class);
+        if (u != null) {
+            u.id = snap.getId();
+        }
         meLive.postValue(u);
     }
 }

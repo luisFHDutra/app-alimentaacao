@@ -1,12 +1,15 @@
 package com.example.alimentaacao.data.model;
 
-import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.ServerTimestamp;
+import java.util.Date;
 
+/** Perfil adicional do voluntário (coleção volunteers). */
 public class Volunteer {
-    public String id;
+    public String ownerUid;
     public String name;
-    public GeoPoint geo;
-    public double radiusKm;
+
+    @ServerTimestamp public Date createdAt;
+    @ServerTimestamp public Date updatedAt;
 
     public Volunteer() {}
 }

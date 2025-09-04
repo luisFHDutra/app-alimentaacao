@@ -40,18 +40,24 @@ public class Bootstrapper {
         String uid = fu.getUid();
         String name = fu.getDisplayName();
         String email = fu.getEmail();
-        @Nullable Uri photo = fu.getPhotoUrl();
+        Uri photo = fu.getPhotoUrl();
 
-        Map<String, Object> payload = new HashMap<>();
-        if (name != null)  payload.put("name", name);
-        if (email != null) payload.put("email", email);
-        if (photo != null) payload.put("photoUrl", photo.toString());
-        payload.put("updatedAt", FieldValue.serverTimestamp());
-        payload.putIfAbsent("createdAt", FieldValue.serverTimestamp());
+        return db().collection("users").document(uid).get()
+                .continueWithTask(t -> {
+                    boolean creating = !t.isSuccessful() || t.getResult() == null || !t.getResult().exists();
 
-        return db().collection("users").document(uid)
-                .set(payload, SetOptions.merge());
+                    Map<String, Object> payload = new HashMap<>();
+                    if (name != null)  payload.put("name", name);
+                    if (email != null) payload.put("email", email);
+                    if (photo != null) payload.put("photoUrl", photo.toString());
+                    if (creating) payload.put("createdAt", FieldValue.serverTimestamp());
+                    payload.put("updatedAt", FieldValue.serverTimestamp());
+
+                    return db().collection("users").document(uid)
+                            .set(payload, SetOptions.merge());
+                });
     }
+
 
     /** Lê o campo type do users/{uid}. Retorna null se não existir/sem tipo. */
     public static Task<String> fetchUserType() {
