@@ -23,20 +23,18 @@ public class DialogNovaSolicitacao extends DialogFragment {
     @NonNull @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         b = DialogNovaSolicitacaoBinding.inflate(getLayoutInflater());
-        androidx.appcompat.app.AlertDialog.Builder d =
-                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                        .setTitle("Nova solicitação")
-                        .setView(b.getRoot())
-                        .setPositiveButton("Salvar", (dlg, w) -> salvar())
-                        .setNegativeButton("Cancelar", (dlg, w) -> dlg.dismiss());
-        return d.create();
+        return new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Nova solicitação")
+                .setView(b.getRoot())
+                .setPositiveButton("Salvar", (dlg, w) -> salvar())
+                .setNegativeButton("Cancelar", (dlg, w) -> dlg.dismiss())
+                .create();
     }
 
     private void salvar() {
-        String uid = FirebaseAuth.getInstance().getCurrentUser() != null
-                ? FirebaseAuth.getInstance().getCurrentUser().getUid()
-                : null;
+        if (!isAdded()) return;
 
+        String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) {
             Toast.makeText(requireContext(), "É necessário estar logado.", Toast.LENGTH_SHORT).show();
             return;
@@ -44,22 +42,36 @@ public class DialogNovaSolicitacao extends DialogFragment {
 
         String titulo = b.etTitulo.getText() != null ? b.etTitulo.getText().toString().trim() : "";
         String itemNome = b.etItem.getText() != null ? b.etItem.getText().toString().trim() : "";
-        String qtdStr   = b.etQtd.getText() != null ? b.etQtd.getText().toString().trim() : "1";
+        String qtdStr = b.etQtd.getText() != null ? b.etQtd.getText().toString().trim() : "";
+
+        if (titulo.isEmpty() || itemNome.isEmpty()) {
+            Toast.makeText(requireContext(), "Preencha título e item.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         int qtd = 1;
-        try {
-            if (!TextUtils.isEmpty(qtdStr)) qtd = Integer.parseInt(qtdStr);
-        } catch (NumberFormatException ignored) {}
+        try { qtd = Integer.parseInt(qtdStr); } catch (Exception ignored) { /* usa 1 */ }
 
         Solicitation s = new Solicitation();
-        s.ownerUid = uid;     // dono do doc (para regras de segurança)
-        s.ongId = uid;        // se você também quiser relacionar à ONG do mesmo uid
+        s.ownerUid = uid;
+        s.ongId = uid;
         s.title = titulo;
         s.status = "ABERTA";
-        s.items = Arrays.asList(new Solicitation.Item(itemNome, qtd));
-        s.geo = new GeoPoint(-23.55, -46.63); // TODO: pegar geo real
+        s.items = java.util.Arrays.asList(new Solicitation.Item(itemNome, qtd));
+        s.geo = new com.google.firebase.firestore.GeoPoint(-23.55, -46.63); // TODO: geo real
 
-        new FirestoreService().addSolicitation(s)
-                .addOnSuccessListener(dr -> Toast.makeText(requireContext(), "Solicitação criada!", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(requireContext(), "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show());
+        new com.example.alimentaacao.data.firebase.FirestoreService().addSolicitation(s)
+                .addOnSuccessListener(dr -> {
+                    if (isAdded()) {
+                        Toast.makeText(requireContext(), "Solicitação criada!", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded()) {
+                        Toast.makeText(requireContext(), "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
+        // O AlertDialog padrão já fecha no botão positivo; nada extra aqui.
     }
+
 }

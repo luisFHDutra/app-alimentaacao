@@ -1,23 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_margin="8dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardUseCompatPadding="true">
 
-    <LinearLayout android:padding="12dp" android:orientation="vertical"
-        android:layout_width="match_parent" android:layout_height="wrap_content">
+    <LinearLayout
+        android:padding="12dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-        <TextView android:id="@+id/tvTitle" android:textStyle="bold"
-            android:textSize="16sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <TextView
+            android:id="@+id/tvTitulo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:text="Título"/>
 
-        <TextView android:id="@+id/tvStatus" android:layout_marginTop="4dp"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        <TextView
+            android:id="@+id/tvResumoItens"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Itens"
+            android:paddingTop="4dp"/>
 
-        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDoar" android:text="Marcar doação"
-                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"/>
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnConcluir" android:text="Concluir"
-                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"/>
-        </LinearLayout>
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ABERTA"
+            android:paddingTop="4dp"/>
+
+        <TextView
+            android:id="@+id/tvData"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:paddingTop="2dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConcluir"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Concluir"
+            android:layout_marginTop="8dp"/>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

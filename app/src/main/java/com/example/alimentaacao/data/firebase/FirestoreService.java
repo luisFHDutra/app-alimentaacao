@@ -12,6 +12,11 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
+import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -65,6 +70,21 @@ public class FirestoreService {
 
         // createdAt/updatedAt serão preenchidos pelo @ServerTimestamp no model
         return solicitations().add(s);
+    }
+
+    /** Escuta em tempo real as solicitações da ONG (ownerUid = uid). */
+    public ListenerRegistration listenSolicitationsByOwner(String uid, EventListener<QuerySnapshot> listener) {
+        return solicitations()
+                .whereEqualTo("ownerUid", uid)
+                .addSnapshotListener(listener);
+    }
+
+    /** Conclui (ATENDIDA) uma solicitação. */
+    public Task<Void> concludeSolicitation(String solicitationId) {
+        Map<String, Object> up = new HashMap<>();
+        up.put("status", "ATENDIDA");
+        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        return solicitations().document(solicitationId).set(up, SetOptions.merge());
     }
 
     /** Atualiza status/atendidaPor da solicitação. */
