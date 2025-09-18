@@ -3,7 +3,7 @@ package com.example.alimentaacao.auth;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Toast;
+import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -11,7 +11,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.alimentaacao.R;
-import com.example.alimentaacao.data.firebase.Bootstrapper;
+import com.example.alimentaacao.data.firebase.FirestoreService;
+import com.example.alimentaacao.data.model.User;
 import com.example.alimentaacao.databinding.ActivityLoginBinding;
 import com.example.alimentaacao.ui.MainActivity;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -19,87 +20,92 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.GoogleAuthProvider;
 
-/**
- * Fluxo:
- *  - Google Sign-In
- *  - Firebase signInWithCredential
- *  - ensureUserDocument + ensureBaseCollections
- *  - se users/{uid}.type inexistente -> ChooseTypeActivity
- *    senão -> MainActivity
- */
 public class LoginActivity extends AppCompatActivity {
 
-    private ActivityLoginBinding binding;
-    private FirebaseAuth auth;
+    private ActivityLoginBinding b;
     private GoogleSignInClient googleClient;
+    private final FirebaseAuth auth = FirebaseAuth.getInstance();
 
-    private final ActivityResultLauncher<Intent> googleSignInLauncher =
+    private final ActivityResultLauncher<Intent> signInLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getData() == null) {
-                    Toast.makeText(this, "Login cancelado.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+                if (result.getData() == null) { show(false); toast("Cancelado."); return; }
+                Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(result.getData());
                 try {
-                    GoogleSignInAccount account = GoogleSignIn.getSignedInAccountFromIntent(result.getData())
-                            .getResult(ApiException.class);
-                    if (account == null) throw new ApiException(null);
-
-                    AuthCredential credential = GoogleAuthProvider.getCredential(account.getIdToken(), null);
-                    auth.signInWithCredential(credential)
-                            .addOnSuccessListener(r -> afterFirebaseLogin())
-                            .addOnFailureListener(e -> {
-                                Log.e("LoginActivity", "Firebase signIn failure", e);
-                                Toast.makeText(this, "Falha no login Firebase", Toast.LENGTH_SHORT).show();
-                            });
-                } catch (Exception e) {
-                    Log.e("LoginActivity", "Google signIn error", e);
-                    Toast.makeText(this, "Erro no Google Sign-In", Toast.LENGTH_SHORT).show();
+                    GoogleSignInAccount acct = task.getResult(ApiException.class);
+                    firebaseAuthWithGoogle(acct.getIdToken());
+                } catch (ApiException e) {
+                    show(false);
+                    Log.e("LoginActivity", "Google sign-in error", e);
+                    toast("Falha no Google Sign-In (código " + e.getStatusCode() + ").");
                 }
             });
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityLoginBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-
-        auth = FirebaseAuth.getInstance();
+        b = ActivityLoginBinding.inflate(getLayoutInflater());
+        setContentView(b.getRoot());
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id)) // gerado via google-services.json
+                .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
         googleClient = GoogleSignIn.getClient(this, gso);
 
-        binding.btnGoogleSignIn.setOnClickListener(v ->
-                googleSignInLauncher.launch(googleClient.getSignInIntent()));
+        b.btnGoogleSignIn.setOnClickListener(v -> {
+            show(true);
+            signInLauncher.launch(googleClient.getSignInIntent());
+        });
 
-        // já logado? vai direto
+        // Se já está logado, segue direto
         if (auth.getCurrentUser() != null) {
-            afterFirebaseLogin();
+            goToMain();
         }
     }
 
-    private void afterFirebaseLogin() {
-        // 1) garante users/{uid}
-        Bootstrapper.ensureUserDocument()
-                .onSuccessTask(v -> Bootstrapper.ensureBaseCollections())
-                .onSuccessTask(v -> Bootstrapper.fetchUserType())
-                .addOnSuccessListener(type -> {
-                    if (type == null || type.isEmpty()) {
-                        startActivity(new Intent(this, ChooseTypeActivity.class));
-                    } else {
-                        startActivity(new Intent(this, MainActivity.class));
-                    }
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("LoginActivity", "Bootstrap pós-login falhou", e);
-                    Toast.makeText(this, "Erro ao preparar o app", Toast.LENGTH_SHORT).show();
-                });
+    private void firebaseAuthWithGoogle(String idToken) {
+        AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
+        auth.signInWithCredential(credential).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                // Cria/atualiza usuário no Firestore
+                com.google.firebase.auth.FirebaseUser fu = auth.getCurrentUser();
+                User u = new User();
+                u.id = fu.getUid();
+                u.name = fu.getDisplayName();
+                u.email = fu.getEmail();
+                u.photoUrl = (fu.getPhotoUrl() != null) ? fu.getPhotoUrl().toString() : null;
+                // type será definido depois (escolha ou já existente)
+                new FirestoreService().createOrMergeUser(u)
+                        .addOnSuccessListener(v -> goToMain())
+                        .addOnFailureListener(e -> {
+                            show(false);
+                            toast("Erro ao salvar usuário: " + e.getMessage());
+                        });
+            } else {
+                show(false);
+                toast("Falha na autenticação.");
+            }
+        });
+    }
+
+    private void goToMain() {
+        show(false);
+        Intent i = new Intent(this, MainActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(i);
+    }
+
+    private void show(boolean loading) {
+        b.progress.setVisibility(loading ? View.VISIBLE : View.GONE);
+        b.btnGoogleSignIn.setEnabled(!loading);
+    }
+
+    private void toast(String m) {
+        android.widget.Toast.makeText(this, m, android.widget.Toast.LENGTH_SHORT).show();
     }
 }
