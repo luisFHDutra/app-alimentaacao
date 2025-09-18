@@ -1,27 +1,80 @@
 package com.example.alimentaacao.ui.perfil;
 
+import android.net.Uri;
+
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.alimentaacao.data.firebase.FirestoreService;
+import com.example.alimentaacao.data.firebase.StorageService;
 import com.example.alimentaacao.data.model.User;
-import com.example.alimentaacao.data.repo.UserRepository;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.ListenerRegistration;
 
 public class PerfilViewModel extends ViewModel {
 
-    private final UserRepository userRepository = new UserRepository();
+    private final MutableLiveData<User> _user = new MutableLiveData<>(null);
+    private final MutableLiveData<Boolean> _saving = new MutableLiveData<>(false);
+    private final MutableLiveData<Boolean> _deleting = new MutableLiveData<>(false);
+    private final MutableLiveData<String> _error = new MutableLiveData<>(null);
+    private ListenerRegistration reg;
 
-    public LiveData<User> me() {
-        return userRepository.me();
+    public LiveData<User> user() { return _user; }
+    public LiveData<Boolean> saving() { return _saving; }
+    public LiveData<Boolean> deleting() { return _deleting; }
+    public LiveData<String> error() { return _error; }
+
+    private final FirestoreService fs = new FirestoreService();
+    private final StorageService ss = new StorageService();
+
+    public void start() {
+        stop();
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) { _error.postValue("Usuário não autenticado."); return; }
+        reg = fs.userRef(uid).addSnapshotListener((snap, err) -> {
+            if (err != null) { _error.postValue(err.getMessage()); return; }
+            if (snap != null && snap.exists()) {
+                _user.postValue(snap.toObject(User.class));
+            }
+        });
     }
 
-    /** Carrega o snapshot atual do usuário. */
-    public void init() {
-        userRepository.loadMe();
+    public void stop() {
+        if (reg != null) { reg.remove(); reg = null; }
     }
 
-    @Override
-    protected void onCleared() {
-        super.onCleared();
-        userRepository.removeMeListener();
+    /** Salva nome e opcionalmente faz upload de nova foto. */
+    public void saveProfile(String newName, Uri newPhotoUri) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) { _error.postValue("Usuário não autenticado."); return; }
+        _saving.postValue(true);
+
+        if (newPhotoUri != null) {
+            ss.uploadProfilePhoto(uid, newPhotoUri)
+                    .continueWithTask(t -> fs.updateUserProfile(uid, newName, t.getResult().toString()))
+                    .addOnCompleteListener(t -> _saving.postValue(false))
+                    .addOnFailureListener(e -> _error.postValue(e.getMessage()));
+        } else {
+            fs.updateUserProfile(uid, newName, null)
+                    .addOnCompleteListener(t -> _saving.postValue(false))
+                    .addOnFailureListener(e -> _error.postValue(e.getMessage()));
+        }
     }
+
+    /** Exclui conta e dados básicos. */
+    public void deleteAccount(java.util.function.Consumer<Boolean> onResult) {
+        _deleting.postValue(true);
+        new com.example.alimentaacao.data.repo.UserRepository()
+                .deleteAccountAndData()
+                .addOnSuccessListener(v -> { _deleting.postValue(false); onResult.accept(true); })
+                .addOnFailureListener(e -> {
+                    _deleting.postValue(false);
+                    _error.postValue(e.getMessage());
+                    onResult.accept(false);
+                });
+    }
+
+    @Override protected void onCleared() { stop(); super.onCleared(); }
 }

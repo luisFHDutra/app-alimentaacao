@@ -180,5 +180,14 @@ public class FirestoreService {
         return solicitations().document(solicitationId).delete();
     }
 
+    // Atualiza nome e/ou photoUrl do usuário autenticado (merge)
+    public com.google.android.gms.tasks.Task<Void> updateUserProfile(String uid, String name, String photoUrl) {
+        java.util.Map<String, Object> up = new java.util.HashMap<>();
+        if (name != null)     up.put("name", name);
+        if (photoUrl != null) up.put("photoUrl", photoUrl);
+        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        return users().document(uid).set(up, com.google.firebase.firestore.SetOptions.merge());
+    }
+
 
 }

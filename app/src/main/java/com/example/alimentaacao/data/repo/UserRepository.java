@@ -76,4 +76,28 @@ public class UserRepository {
         }
         meLive.postValue(u);
     }
+
+    public com.google.android.gms.tasks.Task<Void> updateProfile(String name, String photoUrl) {
+        String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getUid();
+        if (uid == null) return com.google.android.gms.tasks.Tasks.forException(
+                new IllegalStateException("Usuário não autenticado"));
+        return new com.example.alimentaacao.data.firebase.FirestoreService()
+                .updateUserProfile(uid, name, photoUrl);
+    }
+
+    public com.google.android.gms.tasks.Task<Void> deleteAccountAndData() {
+        com.google.firebase.auth.FirebaseUser u = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (u == null) return com.google.android.gms.tasks.Tasks.forException(
+                new IllegalStateException("Usuário não autenticado"));
+
+        String uid = u.getUid();
+        com.example.alimentaacao.data.firebase.FirestoreService fs = new com.example.alimentaacao.data.firebase.FirestoreService();
+        com.example.alimentaacao.data.firebase.StorageService ss = new com.example.alimentaacao.data.firebase.StorageService();
+
+        // Exclui Storage + Firestore, depois Auth (ordem ajuda a não “perder” referência do uid)
+        return ss.deleteProfilePhoto(uid)
+                .continueWithTask(t -> fs.userRef(uid).delete())
+                .continueWithTask(t -> u.delete());
+    }
+
 }
