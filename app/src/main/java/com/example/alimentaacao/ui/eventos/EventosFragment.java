@@ -8,6 +8,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -41,8 +42,8 @@ public class EventosFragment extends Fragment {
         vm = new ViewModelProvider(this).get(EventViewModel.class);
 
         adapter = new EventListAdapter(new ArrayList<>(), new EventListAdapter.Listener() {
-            @Override public void onInteresse(Event e, boolean add) { /* não usado para ONG */ }
-            @Override public void onConfirmar(Event e, boolean add) { /* não usado para ONG */ }
+            @Override public void onInteresse(Event e, boolean add) { /* ONG não usa aqui */ }
+            @Override public void onConfirmar(Event e, boolean add) { /* ONG não usa aqui */ }
 
             @Override public void onEditar(Event e) {
                 DialogNovoEvento.newEditDialog(e)
@@ -50,9 +51,19 @@ public class EventosFragment extends Fragment {
             }
 
             @Override public void onExcluir(Event e) {
-                new FirestoreService().deleteEvent(e.id)
-                        .addOnFailureListener(err -> Toast.makeText(requireContext(),
-                                "Erro ao excluir: " + err.getMessage(), Toast.LENGTH_LONG).show());
+                // >>> Confirmação antes de excluir <<<
+                new AlertDialog.Builder(requireContext())
+                        .setTitle("Excluir evento")
+                        .setMessage("Deseja realmente excluir este evento?")
+                        .setPositiveButton("Excluir", (d, w) -> {
+                            new FirestoreService().deleteEvent(e.id)
+                                    .addOnSuccessListener(v ->
+                                            Toast.makeText(requireContext(), "Evento excluído.", Toast.LENGTH_SHORT).show())
+                                    .addOnFailureListener(err ->
+                                            Toast.makeText(requireContext(), "Erro ao excluir: " + err.getMessage(), Toast.LENGTH_LONG).show());
+                        })
+                        .setNegativeButton("Cancelar", null)
+                        .show();
             }
         }, /*isOng=*/ true);
 
@@ -60,25 +71,28 @@ public class EventosFragment extends Fragment {
         b.recycler.addItemDecoration(new DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL));
         b.recycler.setAdapter(adapter);
 
-        // Inset pro FAB ficar clicável
+        // Garantir que o FAB fique clicável acima do status/nav bar
         ViewCompat.setOnApplyWindowInsetsListener(b.getRoot(), (v, ins) -> {
             Insets s = ins.getInsets(WindowInsetsCompat.Type.systemBars());
             ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) b.fabAdd.getLayoutParams();
             int extraTop = (int)(16 * getResources().getDisplayMetrics().density);
             int extraEnd = (int)(12 * getResources().getDisplayMetrics().density);
-            lp.topMargin = s.top + extraTop; lp.setMarginEnd(s.right + extraEnd);
-            b.fabAdd.setLayoutParams(lp); return ins;
+            lp.topMargin = s.top + extraTop;
+            lp.setMarginEnd(s.right + extraEnd);
+            b.fabAdd.setLayoutParams(lp);
+            return ins;
         });
 
         b.fabAdd.bringToFront();
-        b.fabAdd.setOnClickListener(v -> new DialogNovoEvento()
-                .show(getParentFragmentManager(), "novo_evento"));
+        b.fabAdd.setOnClickListener(v ->
+                new DialogNovoEvento().show(getParentFragmentManager(), "novo_evento"));
 
         vm.list().observe(getViewLifecycleOwner(), list -> {
             boolean empty = list == null || list.isEmpty();
             b.emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
             adapter.submit(list);
         });
+
         vm.error().observe(getViewLifecycleOwner(), msg -> {
             if (msg != null && !msg.isEmpty()) {
                 Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show();
