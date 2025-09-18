@@ -13,14 +13,12 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Adapter simples para listar solicitações da ONG com ação "Concluir".
- * IDs do layout: tvTitulo, tvResumoItens, tvStatus, tvData, btnConcluir
- */
 public class SolicitationListAdapter extends RecyclerView.Adapter<SolicitationListAdapter.VH> {
 
     public interface Listener {
         void onConcluir(Solicitation s);
+        void onEditar(Solicitation s);
+        void onExcluir(Solicitation s);
     }
 
     private final Listener listener;
@@ -48,8 +46,7 @@ public class SolicitationListAdapter extends RecyclerView.Adapter<SolicitationLi
         holder.bind(data.get(position));
     }
 
-    @Override
-    public int getItemCount() { return data.size(); }
+    @Override public int getItemCount() { return data.size(); }
 
     class VH extends RecyclerView.ViewHolder {
         final ItemSolicitacaoBinding b;
@@ -60,21 +57,31 @@ public class SolicitationListAdapter extends RecyclerView.Adapter<SolicitationLi
 
         void bind(Solicitation s) {
             b.tvTitulo.setText(s.title != null ? s.title : "(sem título)");
+
             if (s.items != null && !s.items.isEmpty()) {
                 Solicitation.Item it = s.items.get(0);
                 b.tvResumoItens.setText(it.nome + " x" + it.qtd + (s.items.size() > 1 ? " (+)" : ""));
             } else {
                 b.tvResumoItens.setText("-");
             }
+
             b.tvStatus.setText(s.status != null ? s.status : "-");
             b.tvData.setText(s.createdAt != null
                     ? DateFormat.getDateTimeInstance().format(s.createdAt) : "-");
 
-            boolean podeConcluir = !"ATENDIDA".equalsIgnoreCase(s.status);
+            boolean podeConcluir = s.status == null || !"ATENDIDA".equalsIgnoreCase(s.status);
             b.btnConcluir.setEnabled(podeConcluir);
             b.btnConcluir.setAlpha(podeConcluir ? 1f : 0.5f);
             b.btnConcluir.setOnClickListener(v -> {
                 if (listener != null) listener.onConcluir(s);
+            });
+
+            b.btnEditar.setOnClickListener(v -> {
+                if (listener != null) listener.onEditar(s);
+            });
+
+            b.btnExcluir.setOnClickListener(v -> {
+                if (listener != null) listener.onExcluir(s);
             });
         }
     }

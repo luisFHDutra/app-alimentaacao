@@ -157,5 +157,28 @@ public class FirestoreService {
         return events().document(eventId).delete();
     }
 
+    // Atualiza campos da solicitação (merge)
+    public com.google.android.gms.tasks.Task<Void> updateSolicitation(
+            String solicitationId,
+            String title,
+            java.util.List<com.example.alimentaacao.data.model.Solicitation.Item> items,
+            com.google.firebase.firestore.GeoPoint geo,
+            String status // opcional (pode ser null)
+    ) {
+        java.util.Map<String, Object> up = new java.util.HashMap<>();
+        if (title != null) up.put("title", title);
+        if (items != null) up.put("items", items);
+        if (geo != null) up.put("geo", geo);
+        if (status != null) up.put("status", status);
+        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        return solicitations().document(solicitationId)
+                .set(up, com.google.firebase.firestore.SetOptions.merge());
+    }
+
+    // Exclui solicitação
+    public com.google.android.gms.tasks.Task<Void> deleteSolicitation(String solicitationId) {
+        return solicitations().document(solicitationId).delete();
+    }
+
 
 }
