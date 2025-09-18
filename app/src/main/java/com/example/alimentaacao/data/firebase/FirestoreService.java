@@ -120,4 +120,42 @@ public class FirestoreService {
                         : com.google.firebase.firestore.FieldValue.arrayRemove(uid);
         return events().document(eventId).update("confirmados", val);
     }
+
+    // Escuta eventos cujo ownerUid == uid (sem orderBy para não exigir índice)
+    public com.google.firebase.firestore.ListenerRegistration listenEventsByOwner(
+            String uid,
+            com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener
+    ) {
+        return events()
+                .whereEqualTo("ownerUid", uid)
+                .addSnapshotListener(listener);
+    }
+
+    // LISTENER: todos os eventos (para aba Mapa)
+    public ListenerRegistration listenAllEvents(
+            com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener
+    ) {
+        return events().addSnapshotListener(listener); // filtra em memória depois
+    }
+
+    // ATUALIZAR campos do evento (merge)
+    public com.google.android.gms.tasks.Task<Void> updateEvent(
+            String eventId, String title, String desc, java.util.Date dateTime, Double lat, Double lng
+    ) {
+        java.util.Map<String, Object> up = new java.util.HashMap<>();
+        if (title != null) up.put("title", title);
+        if (desc  != null) up.put("description", desc);
+        if (dateTime != null) up.put("dateTime", dateTime);
+        if (lat != null) up.put("lat", lat);
+        if (lng != null) up.put("lng", lng);
+        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        return events().document(eventId).set(up, com.google.firebase.firestore.SetOptions.merge());
+    }
+
+    // EXCLUIR evento
+    public com.google.android.gms.tasks.Task<Void> deleteEvent(String eventId) {
+        return events().document(eventId).delete();
+    }
+
+
 }

@@ -2,36 +2,69 @@ package com.example.alimentaacao.data.repo;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
 import com.example.alimentaacao.data.firebase.FirestoreService;
 import com.example.alimentaacao.data.model.Event;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.firestore.*;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
+/** Repository de eventos (escuta em tempo real) */
 public class EventRepository {
+
     private final FirestoreService fs = new FirestoreService();
+    private final MutableLiveData<List<Event>> list = new MutableLiveData<>(new ArrayList<>());
     private ListenerRegistration reg;
-    private final MutableLiveData<List<Event>> listLive = new MutableLiveData<>(new ArrayList<>());
 
-    public LiveData<List<Event>> list() { return listLive; }
+    public LiveData<List<Event>> list() { return list; }
 
-    public void listenAll() {
-        if (reg != null) reg.remove();
-        reg = fs.eventos().orderBy("dateTime", Query.Direction.ASCENDING)
-                .addSnapshotListener((qs, e) -> {
-                    if (qs == null) return;
-                    List<Event> res = new ArrayList<>();
-                    for (DocumentSnapshot d : qs.getDocuments()) {
-                        Event ev = d.toObject(Event.class);
-                        if (ev != null) { ev.id = d.getId(); res.add(ev); }
-                    }
-                    listLive.setValue(res);
-                });
+    /** Eventos da ONG logada */
+    public void listenMine(String ownerUid) {
+        stop();
+        reg = fs.listenEventsByOwner(ownerUid, (QuerySnapshot snap, com.google.firebase.firestore.FirebaseFirestoreException err) -> {
+            if (err != null) { return; }
+            List<Event> out = new ArrayList<>();
+            if (snap != null) {
+                for (DocumentSnapshot ds : snap.getDocuments()) {
+                    try {
+                        Event e = ds.toObject(Event.class);
+                        if (e != null) {
+                            e.id = ds.getId();
+                            if (e.interessados == null) e.interessados = new ArrayList<>();
+                            if (e.confirmados == null) e.confirmados = new ArrayList<>();
+                            out.add(e);
+                        }
+                    } catch (Exception ignored) { }
+                }
+            }
+            // ordena por dateTime (ou createdAt) desc
+            Collections.sort(out, new Comparator<Event>() {
+                @Override public int compare(Event a, Event b) {
+                    long ta = a.dateTime != null ? a.dateTime.getTime() :
+                            (a.createdAt != null ? a.createdAt.getTime() : 0L);
+                    long tb = b.dateTime != null ? b.dateTime.getTime() :
+                            (b.createdAt != null ? b.createdAt.getTime() : 0L);
+                    return Long.compare(tb, ta);
+                }
+            });
+            list.postValue(out);
+        });
     }
 
-    public Task<DocumentReference> add(Event e) { return fs.addEvent(e); }
-    public Task<Void> toggleInteresse(String id, String uid, boolean add) { return fs.toggleInteresse(id, uid, add); }
-    public Task<Void> toggleConfirmado(String id, String uid, boolean add) { return fs.toggleConfirmado(id, uid, add); }
+    public void toggleInteresse(String eventId, String uid, boolean add) {
+        fs.toggleInteresse(eventId, uid, add);
+    }
+
+    public void toggleConfirmado(String eventId, String uid, boolean add) {
+        fs.toggleConfirmado(eventId, uid, add);
+    }
+
+    public void stop() {
+        if (reg != null) { reg.remove(); reg = null; }
+    }
 }

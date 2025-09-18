@@ -27,6 +27,7 @@
         </activity>
 
         <activity android:name=".ui.MainActivity" />
+        <activity android:name=".ui.eventos.MapPickerActivity"/>
 
         <!-- Widget -->
         <receiver

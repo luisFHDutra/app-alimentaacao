@@ -1,19 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_margin="8dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-    <LinearLayout android:padding="12dp" android:orientation="vertical"
-        android:layout_width="match_parent" android:layout_height="wrap_content">
-        <TextView android:id="@+id/tvTitle" android:textStyle="bold" android:textSize="16sp"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <TextView android:id="@+id/tvDesc" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <TextView android:id="@+id/tvDate" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardUseCompatPadding="true">
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:text="Título"/>
+
+        <TextView
+            android:id="@+id/tvDesc"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Descrição" android:paddingTop="2dp"/>
+
+        <TextView
+            android:id="@+id/tvDate"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="-" android:paddingTop="4dp"/>
+
+        <TextView
+            android:id="@+id/tvCounters"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="0 interessados • 0 confirmados"
+            android:paddingTop="4dp"/>
+
+        <LinearLayout
+            android:id="@+id/rowActions"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:paddingTop="8dp">
+
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnInteresse" android:text="Tenho interesse"
-                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"/>
+                android:id="@+id/btnEdit"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:text="Editar"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnConfirmar" android:text="Confirmar"
-                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"/>
+                android:id="@+id/btnDelete"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:text="Excluir"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <!-- botões RSVP (somente para voluntário; ONG não verá) -->
+        <LinearLayout
+            android:id="@+id/rowRsvp"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:paddingTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInteresse"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:text="Tenho interesse"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConfirmar"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:text="Confirmar"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"/>
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
