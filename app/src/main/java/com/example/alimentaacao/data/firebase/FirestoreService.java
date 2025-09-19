@@ -9,6 +9,8 @@ import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
@@ -189,5 +191,37 @@ public class FirestoreService {
         return users().document(uid).set(up, com.google.firebase.firestore.SetOptions.merge());
     }
 
+    public com.google.android.gms.tasks.Task<Void> upsertUserFromAuthRespectingProfile(com.google.firebase.auth.FirebaseUser fu) {
+        if (fu == null) return Tasks.forException(new IllegalStateException("Sem usuário"));
+
+        String uid = fu.getUid();
+        com.google.firebase.firestore.DocumentReference ref = users().document(uid);
+
+        return ref.get().continueWithTask(task -> {
+            if (!task.isSuccessful()) return Tasks.forException(task.getException());
+
+            DocumentSnapshot ds = task.getResult();
+
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            // Sempre atualize email / photoUrl (se existirem)
+            if (fu.getEmail() != null) payload.put("email", fu.getEmail());
+            if (fu.getPhotoUrl() != null) payload.put("photoUrl", fu.getPhotoUrl().toString());
+
+            // Só sobrescreva 'name' se NÃO existir ainda no Firestore
+            boolean hasNameInDb = ds != null && ds.contains("name") && ds.getString("name") != null && !ds.getString("name").isEmpty();
+            if (!hasNameInDb && fu.getDisplayName() != null && !fu.getDisplayName().isEmpty()) {
+                payload.put("name", fu.getDisplayName());
+            }
+
+            // Timestamps
+            payload.put("updatedAt", FieldValue.serverTimestamp());
+            if (ds == null || !ds.exists()) {
+                payload.put("createdAt", FieldValue.serverTimestamp());
+            }
+
+            // NUNCA mexa em 'type' aqui — o usuário escolhe/edita depois
+            return ref.set(payload, SetOptions.merge());
+        });
+    }
 
 }

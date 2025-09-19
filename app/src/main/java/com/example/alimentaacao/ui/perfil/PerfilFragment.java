@@ -72,16 +72,20 @@ public class PerfilFragment extends Fragment {
 
         // >>> Botão SAIR <<<
         b.btnSair.setOnClickListener(v -> {
-            // Sai do Firebase
+            // Pare qualquer listener antes de sair, para evitar PERMISSION_DENIED durante a transição
+            if (vm != null) vm.stop();
+
+            // Firebase sign-out
             FirebaseAuth.getInstance().signOut();
-            // Sai do Google (opcional, para limpar conta escolhida)
+
+            // Google sign-out (limpa a conta escolhida)
             GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                     .requestIdToken(getString(R.string.default_web_client_id))
                     .requestEmail()
                     .build();
             GoogleSignIn.getClient(requireContext(), gso).signOut();
 
-            // Volta para Login limpando o back stack
+            // Navega para a tela de login limpando o back stack
             Intent i = new Intent(requireContext(), LoginActivity.class);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(i);

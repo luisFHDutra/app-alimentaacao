@@ -72,19 +72,14 @@ public class LoginActivity extends AppCompatActivity {
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
         auth.signInWithCredential(credential).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                // Cria/atualiza usuário no Firestore
                 com.google.firebase.auth.FirebaseUser fu = auth.getCurrentUser();
-                User u = new User();
-                u.id = fu.getUid();
-                u.name = fu.getDisplayName();
-                u.email = fu.getEmail();
-                u.photoUrl = (fu.getPhotoUrl() != null) ? fu.getPhotoUrl().toString() : null;
-                // type será definido depois (escolha ou já existente)
-                new FirestoreService().createOrMergeUser(u)
+                // Este método respeita o que já existe no Firestore (não sobrescreve 'name' se já houver)
+                new com.example.alimentaacao.data.firebase.FirestoreService()
+                        .upsertUserFromAuthRespectingProfile(fu)
                         .addOnSuccessListener(v -> goToMain())
                         .addOnFailureListener(e -> {
                             show(false);
-                            toast("Erro ao salvar usuário: " + e.getMessage());
+                            toast("Erro ao registrar usuário: " + e.getMessage());
                         });
             } else {
                 show(false);
