@@ -1,25 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Empty state (SEM botão) -->
+    <!-- Lista -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="0dp"/>
+
+    <!-- Empty state simples -->
     <LinearLayout
         android:id="@+id/emptyState"
         android:orientation="vertical"
         android:gravity="center"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
         android:padding="24dp"
-        android:visibility="gone"
-        android:clickable="false"
-        android:focusable="false"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
@@ -30,37 +35,19 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Toque no + para criar a primeira solicitação."
+            android:text="Toque em “Nova” para criar a primeira solicitação."
             android:paddingTop="8dp"/>
     </LinearLayout>
 
-    <!-- Lista -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:padding="8dp"
-        android:clipToPadding="false"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-    <!-- FAB no topo-direito, com elevação alta para ficar sempre clicável -->
+    <!-- FAB estendido (texto + ícone) -->
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabAdd"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Nova"
-        android:contentDescription="Nova solicitação"
         app:icon="@drawable/ic_add_24"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="12dp"
-        android:layout_marginEnd="12dp"
-        android:elevation="12dp"
-        android:translationZ="12dp"
-        app:ensureMinTouchTargetSize="true"
-        app:backgroundTint="?attr/colorSecondaryContainer"
-        app:tint="?attr/colorOnSecondaryContainer"/>
-</androidx.constraintlayout.widget.ConstraintLayout>
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:translationZ="10dp"
+        android:contentDescription="Nova solicitação"/>
+</FrameLayout>

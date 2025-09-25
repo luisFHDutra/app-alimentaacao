@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:padding="24dp"
-    android:gravity="center" android:layout_width="match_parent" android:layout_height="match_parent">
-    <TextView android:text="@string/choose_type_title" android:textSize="20sp"
+    android:orientation="vertical" android:gravity="center"
+    android:padding="24dp"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <TextView
+        android:text="Quem é você?"
+        android:textStyle="bold"
+        android:textSize="20sp"
+        android:layout_marginBottom="16dp"
         android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnOng" android:text="@string/type_ong"
-        android:layout_marginTop="16dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        android:id="@+id/btnOng"
+        android:text="Sou ONG"
+        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnVolunteer" android:text="@string/type_volunteer"
-        android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        android:id="@+id/btnVolunteer"
+        android:text="Sou Voluntário"
+        android:layout_marginTop="12dp"
+        android:layout_width="match_parent" android:layout_height="wrap_content"/>
 </LinearLayout>

@@ -7,37 +7,42 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.alimentaacao.data.firebase.Bootstrapper;
+import com.example.alimentaacao.data.firebase.FirestoreService;
 import com.example.alimentaacao.databinding.ActivityChooseTypeBinding;
 import com.example.alimentaacao.ui.MainActivity;
+import com.google.firebase.auth.FirebaseAuth;
 
-/**
- * O usuário escolhe o tipo. Gravamos em users/{uid}.type e criamos doc inicial por tipo.
- */
 public class ChooseTypeActivity extends AppCompatActivity {
 
-    private ActivityChooseTypeBinding binding;
+    private ActivityChooseTypeBinding b;
+    private final FirestoreService fs = new FirestoreService();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityChooseTypeBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        b = ActivityChooseTypeBinding.inflate(getLayoutInflater());
+        setContentView(b.getRoot());
 
-        binding.btnOng.setOnClickListener(v -> choose("ONG"));
-        binding.btnVolunteer.setOnClickListener(v -> choose("VOLUNTARIO"));
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            finish();
+            return;
+        }
+
+        b.btnOng.setOnClickListener(v -> saveType("ONG"));
+        b.btnVolunteer.setOnClickListener(v -> saveType("VOLUNTARIO"));
     }
 
-    private void choose(String type) {
-        Bootstrapper.setUserType(type)
-                .onSuccessTask(v -> Bootstrapper.ensureTypeDocuments(type))
+    private void saveType(String type) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) { Toast.makeText(this, "Faça login novamente.", Toast.LENGTH_SHORT).show(); return; }
+
+        fs.setUserType(uid, type)
                 .addOnSuccessListener(v -> {
-                    Toast.makeText(this, "Perfil salvo: " + type, Toast.LENGTH_SHORT).show();
-                    startActivity(new Intent(this, MainActivity.class));
-                    finish();
+                    Toast.makeText(this, "Tipo definido: " + type, Toast.LENGTH_SHORT).show();
+                    Intent i = new Intent(this, MainActivity.class);
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(i);
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Falha ao salvar tipo: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                );
+                .addOnFailureListener(e -> Toast.makeText(this, "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show());
     }
 }
