@@ -1,6 +1,7 @@
 package com.example.alimentaacao.ui.solicitacoes;
 
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -22,10 +23,12 @@ public class SolicitationListAdapter extends RecyclerView.Adapter<SolicitationLi
     }
 
     private final Listener listener;
+    private final boolean isOng;
     private final List<Solicitation> data = new ArrayList<>();
 
-    public SolicitationListAdapter(Listener listener) {
+    public SolicitationListAdapter(Listener listener, boolean isOng) {
         this.listener = listener;
+        this.isOng = isOng;
     }
 
     public void submit(List<Solicitation> list) {
@@ -69,20 +72,28 @@ public class SolicitationListAdapter extends RecyclerView.Adapter<SolicitationLi
             b.tvData.setText(s.createdAt != null
                     ? DateFormat.getDateTimeInstance().format(s.createdAt) : "-");
 
-            boolean podeConcluir = s.status == null || !"ATENDIDA".equalsIgnoreCase(s.status);
-            b.btnConcluir.setEnabled(podeConcluir);
-            b.btnConcluir.setAlpha(podeConcluir ? 1f : 0.5f);
-            b.btnConcluir.setOnClickListener(v -> {
-                if (listener != null) listener.onConcluir(s);
-            });
+            // Ações variam por tipo
+            if (isOng) {
+                boolean podeConcluir = s.status == null || !"ATENDIDA".equalsIgnoreCase(s.status);
+                b.btnConcluir.setVisibility(View.VISIBLE);
+                b.btnEditar.setVisibility(View.VISIBLE);
+                b.btnExcluir.setVisibility(View.VISIBLE);
 
-            b.btnEditar.setOnClickListener(v -> {
-                if (listener != null) listener.onEditar(s);
-            });
+                b.btnConcluir.setEnabled(podeConcluir);
+                b.btnConcluir.setAlpha(podeConcluir ? 1f : 0.5f);
+                b.btnConcluir.setOnClickListener(v -> { if (listener != null) listener.onConcluir(s); });
+                b.btnEditar.setOnClickListener(v -> { if (listener != null) listener.onEditar(s); });
+                b.btnExcluir.setOnClickListener(v -> { if (listener != null) listener.onExcluir(s); });
+            } else {
+                // VOLUNTÁRIO: sem ações de editar/excluir/concluir
+                b.btnConcluir.setVisibility(View.GONE);
+                b.btnEditar.setVisibility(View.GONE);
+                b.btnExcluir.setVisibility(View.GONE);
 
-            b.btnExcluir.setOnClickListener(v -> {
-                if (listener != null) listener.onExcluir(s);
-            });
+                b.btnConcluir.setOnClickListener(null);
+                b.btnEditar.setOnClickListener(null);
+                b.btnExcluir.setOnClickListener(null);
+            }
         }
     }
 }

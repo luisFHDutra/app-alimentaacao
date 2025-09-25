@@ -21,21 +21,23 @@
         android:id="@+id/emptyState"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="24dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:padding="24dp"
         android:visibility="gone">
 
         <TextView
+            android:id="@+id/tvEmptyTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Nenhuma solicitação ainda"
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"/>
 
         <TextView
+            android:id="@+id/tvEmptySubtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Toque em “Nova” para criar a primeira solicitação."
+            android:text="Toque em Nova para criar a primeira solicitação."
             android:paddingTop="8dp"/>
     </LinearLayout>
 

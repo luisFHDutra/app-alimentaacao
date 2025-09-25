@@ -211,6 +211,25 @@ public class FirestoreService {
         return users().document(uid).set(m, SetOptions.merge());
     }
 
+    // Retorna o tipo do usuário ("ONG" ou "VOLUNTARIO")
+    public com.google.android.gms.tasks.Task<String> getUserType(String uid) {
+        if (uid == null) return com.google.android.gms.tasks.Tasks.forException(
+                new IllegalStateException("uid nulo"));
+        return getUserDoc(uid).continueWith(t -> {
+            com.google.firebase.firestore.DocumentSnapshot ds = t.getResult();
+            return (ds != null) ? ds.getString("type") : null;
+        });
+    }
+
+    // Escuta todas as solicitações com status ABERTA (para voluntário)
+    public com.google.firebase.firestore.ListenerRegistration listenSolicitationsOpen(
+            com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener
+    ) {
+        return solicitations()
+                .whereEqualTo("status", "ABERTA")
+                .addSnapshotListener(listener);
+    }
+
     public Task<Void> upsertUserFromAuthRespectingProfile(com.google.firebase.auth.FirebaseUser fu) {
         if (fu == null) return Tasks.forException(new IllegalStateException("Sem usuário"));
         String uid = fu.getUid();
