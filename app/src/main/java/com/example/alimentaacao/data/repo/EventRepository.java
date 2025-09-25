@@ -67,4 +67,44 @@ public class EventRepository {
     public void stop() {
         if (reg != null) { reg.remove(); reg = null; }
     }
+
+    public void listenAll() {
+        stop();
+        reg = fs.listenAllEvents((QuerySnapshot snap, com.google.firebase.firestore.FirebaseFirestoreException err) -> {
+            if (err != null) {
+                // Se quiser propagar isso para a UI, veja a opção "Extra" abaixo.
+                android.util.Log.w("EventRepository", "listenAll error", err);
+                return;
+            }
+
+            List<Event> out = new ArrayList<>();
+            if (snap != null) {
+                for (DocumentSnapshot ds : snap.getDocuments()) {
+                    try {
+                        Event e = ds.toObject(Event.class);
+                        if (e != null) {
+                            e.id = ds.getId();
+                            if (e.interessados == null) e.interessados = new ArrayList<>();
+                            if (e.confirmados == null)  e.confirmados  = new ArrayList<>();
+                            out.add(e);
+                        }
+                    } catch (Exception ignored) { }
+                }
+            }
+
+            // Ordena por dateTime (fallback para createdAt) - mais recentes primeiro
+            Collections.sort(out, new Comparator<Event>() {
+                @Override public int compare(Event a, Event b) {
+                    long ta = a.dateTime != null ? a.dateTime.getTime()
+                            : (a.createdAt != null ? a.createdAt.getTime() : 0L);
+                    long tb = b.dateTime != null ? b.dateTime.getTime()
+                            : (b.createdAt != null ? b.createdAt.getTime() : 0L);
+                    return Long.compare(tb, ta);
+                }
+            });
+
+            list.postValue(out);
+        });
+    }
+
 }

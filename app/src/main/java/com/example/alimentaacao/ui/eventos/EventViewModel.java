@@ -3,10 +3,8 @@ package com.example.alimentaacao.ui.eventos;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
 import com.example.alimentaacao.data.model.Event;
 import com.example.alimentaacao.data.repo.EventRepository;
-
 import java.util.List;
 
 public class EventViewModel extends ViewModel {
@@ -24,13 +22,13 @@ public class EventViewModel extends ViewModel {
         repo.listenMine(ownerUid);
     }
 
+    /** Para voluntário: ou para listar públicos em geral */
+    public void startAll() { repo.listenAll(); }
+
     public void stop() { repo.stop(); }
 
     public void toggleInteresse(String id, String uid, boolean add) { repo.toggleInteresse(id, uid, add); }
     public void toggleConfirmado(String id, String uid, boolean add) { repo.toggleConfirmado(id, uid, add); }
 
-    @Override protected void onCleared() {
-        stop();
-        super.onCleared();
-    }
+    @Override protected void onCleared() { stop(); super.onCleared(); }
 }
