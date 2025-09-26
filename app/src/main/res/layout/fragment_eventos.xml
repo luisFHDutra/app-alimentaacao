@@ -5,7 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Lista -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler"
         android:layout_width="match_parent"
@@ -16,7 +15,6 @@
         android:paddingTop="8dp"
         android:paddingBottom="0dp"/>
 
-    <!-- Empty state -->
     <LinearLayout
         android:id="@+id/emptyState"
         android:orientation="vertical"
@@ -34,14 +32,13 @@
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"/>
 
         <TextView
-            android:id="@+id/tvEmptySubtitle"
+            android:id="@+id/tvEmptyHint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Toque em “Nova” para criar seu primeiro evento."
+            android:text="—"
             android:paddingTop="8dp"/>
     </LinearLayout>
 
-    <!-- FAB inferior direito -->
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fabAdd"
         android:layout_width="wrap_content"
@@ -51,5 +48,6 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:translationZ="10dp"
-        android:contentDescription="Novo evento"/>
+        android:contentDescription="Novo evento"
+        android:visibility="gone"/>
 </FrameLayout>

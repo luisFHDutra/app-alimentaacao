@@ -20,6 +20,8 @@ public class Event {
     public List<String> interessados;
     public List<String> confirmados;
 
+    public String status;
+
     @ServerTimestamp public Date createdAt;
     @ServerTimestamp public Date updatedAt;
 

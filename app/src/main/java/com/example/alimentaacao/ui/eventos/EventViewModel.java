@@ -30,5 +30,9 @@ public class EventViewModel extends ViewModel {
     public void toggleInteresse(String id, String uid, boolean add) { repo.toggleInteresse(id, uid, add); }
     public void toggleConfirmado(String id, String uid, boolean add) { repo.toggleConfirmado(id, uid, add); }
 
+    public void startAllOpen() {
+        repo.listenAllOpen();
+    }
+
     @Override protected void onCleared() { stop(); super.onCleared(); }
 }

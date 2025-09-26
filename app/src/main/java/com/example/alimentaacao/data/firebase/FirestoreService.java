@@ -256,4 +256,57 @@ public class FirestoreService {
         });
     }
 
+    public com.google.android.gms.tasks.Task<Void> closeEvent(String eventId) {
+        java.util.Map<String, Object> up = new java.util.HashMap<>();
+        up.put("status", "ENCERRADO");
+        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        return events().document(eventId).set(up, com.google.firebase.firestore.SetOptions.merge());
+    }
+
+    /** Deleta em lote TUDO que pertence ao ownerUid (eventos + solicitações). */
+    public com.google.android.gms.tasks.Task<Void> deleteAllOwnedContent(String ownerUid) {
+        com.google.android.gms.tasks.TaskCompletionSource<Void> tcs = new com.google.android.gms.tasks.TaskCompletionSource<>();
+
+        // 1) coletar ids
+        java.util.List<String> evIds = new java.util.ArrayList<>();
+        java.util.List<String> soIds = new java.util.ArrayList<>();
+
+        events().whereEqualTo("ownerUid", ownerUid).get()
+                .continueWithTask(te -> {
+                    if (te.isSuccessful() && te.getResult() != null) {
+                        for (com.google.firebase.firestore.DocumentSnapshot ds : te.getResult()) {
+                            evIds.add(ds.getId());
+                        }
+                    }
+                    return solicitations().whereEqualTo("ownerUid", ownerUid).get();
+                })
+                .continueWithTask(ts -> {
+                    if (ts.isSuccessful() && ts.getResult() != null) {
+                        for (com.google.firebase.firestore.DocumentSnapshot ds : ts.getResult()) {
+                            soIds.add(ds.getId());
+                        }
+                    }
+                    // 2) deletar em lotes de até 500
+                    java.util.List<com.google.android.gms.tasks.Task<Void>> batchTasks = new java.util.ArrayList<>();
+                    for (int i = 0; i < evIds.size(); i += 400) {
+                        com.google.firebase.firestore.WriteBatch b = FirebaseFirestore.getInstance().batch();
+                        for (int j = i; j < Math.min(i + 400, evIds.size()); j++) {
+                            b.delete(events().document(evIds.get(j)));
+                        }
+                        batchTasks.add(b.commit());
+                    }
+                    for (int i = 0; i < soIds.size(); i += 400) {
+                        com.google.firebase.firestore.WriteBatch b = FirebaseFirestore.getInstance().batch();
+                        for (int j = i; j < Math.min(i + 400, soIds.size()); j++) {
+                            b.delete(solicitations().document(soIds.get(j)));
+                        }
+                        batchTasks.add(b.commit());
+                    }
+                    return com.google.android.gms.tasks.Tasks.whenAll(batchTasks);
+                })
+                .addOnSuccessListener(v -> tcs.setResult(null))
+                .addOnFailureListener(tcs::setException);
+
+        return tcs.getTask();
+    }
 }

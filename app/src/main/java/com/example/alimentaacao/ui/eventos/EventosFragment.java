@@ -2,10 +2,9 @@ package com.example.alimentaacao.ui.eventos;
 
 import android.os.Bundle;
 import android.util.TypedValue;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.*;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -13,12 +12,14 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
+
 import com.example.alimentaacao.R;
 import com.example.alimentaacao.data.firebase.FirestoreService;
 import com.example.alimentaacao.data.model.Event;
 import com.example.alimentaacao.databinding.FragmentEventosBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
+
 import java.util.ArrayList;
 
 public class EventosFragment extends Fragment {
@@ -26,8 +27,7 @@ public class EventosFragment extends Fragment {
     private FragmentEventosBinding b;
     private EventViewModel vm;
     private EventListAdapter adapter;
-    private Boolean isOng = null; // indefinido até descobrir no Firestore
-    private String uid;
+    private boolean isOng = false; // começa como voluntário p/ evitar “piscar”
 
     @Nullable @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -36,112 +36,24 @@ public class EventosFragment extends Fragment {
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+    public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
+        super.onViewCreated(v, s);
         vm = new ViewModelProvider(this).get(EventViewModel.class);
 
-        uid = FirebaseAuth.getInstance().getUid();
-
-        // Recycler base
+        // Adapter no modo *voluntário* inicialmente (sem ações e sem FAB)
+        setEmptyHint(false);
+        adapter = buildAdapter(false);
         b.recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         b.recycler.addItemDecoration(new DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL));
+        b.recycler.setAdapter(adapter);
         b.recycler.setClipToPadding(false);
 
-        // Ajuste de layout (padding e FAB acima do bottomNav)
+        // FAB ação
+        b.fabAdd.setOnClickListener(v2 -> new DialogNovoEvento().show(getParentFragmentManager(), "novo_evento"));
+        b.fabAdd.bringToFront();
+
         adjustForBottomNav();
 
-        // Resolve tipo do usuário e então configura UI e dados
-        resolveUserTypeAndSetup();
-    }
-
-    private void resolveUserTypeAndSetup() {
-        if (uid == null) {
-            Toast.makeText(requireContext(), "Usuário não autenticado.", Toast.LENGTH_LONG).show();
-            // fallback: voluntário (visualização) sem ações de escrita
-            setupUi(false);
-            vm.startAll();
-            hookObservers();
-            return;
-        }
-        new FirestoreService().getUserDoc(uid)
-                .addOnSuccessListener(this::onUserDoc)
-                .addOnFailureListener(e -> {
-                    // Se falhar, trate como voluntário
-                    setupUi(false);
-                    vm.startAll();
-                    hookObservers();
-                });
-    }
-
-    private void onUserDoc(DocumentSnapshot ds) {
-        String type = ds != null ? ds.getString("type") : null;
-        boolean ong = "ONG".equalsIgnoreCase(type);
-        setupUi(ong);
-        if (ong) vm.startMine(uid);
-        else     vm.startAll();
-        hookObservers();
-    }
-
-    /** Monta Adapter, FAB e empty state conforme seja ONG/voluntário */
-    private void setupUi(boolean ong) {
-        this.isOng = ong;
-
-        adapter = new EventListAdapter(new ArrayList<>(), new EventListAdapter.Listener() {
-            @Override public void onInteresse(Event e, boolean add) {
-                if (uid == null) {
-                    Toast.makeText(requireContext(), "Faça login para interagir.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                vm.toggleInteresse(e.id, uid, add);
-            }
-            @Override public void onConfirmar(Event e, boolean add) {
-                if (uid == null) {
-                    Toast.makeText(requireContext(), "Faça login para interagir.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                vm.toggleConfirmado(e.id, uid, add);
-            }
-            @Override public void onEditar(Event e) {
-                if (!Boolean.TRUE.equals(isOng)) return;
-                DialogNovoEvento.newEditDialog(e).show(getParentFragmentManager(), "editar_evento");
-            }
-            @Override public void onExcluir(Event e) {
-                if (!Boolean.TRUE.equals(isOng)) return;
-                new AlertDialog.Builder(requireContext())
-                        .setTitle("Excluir evento")
-                        .setMessage("Deseja realmente excluir este evento?")
-                        .setPositiveButton("Excluir", (d, w) ->
-                                new FirestoreService().deleteEvent(e.id)
-                                        .addOnFailureListener(err ->
-                                                Toast.makeText(requireContext(), "Erro ao excluir: " + err.getMessage(), Toast.LENGTH_LONG).show()))
-                        .setNegativeButton("Cancelar", null)
-                        .show();
-            }
-        }, /*isOng=*/ ong, /*currentUid=*/ uid);
-
-        b.recycler.setAdapter(adapter);
-
-        // FAB: só ONG cria evento
-        b.fabAdd.setVisibility(ong ? View.VISIBLE : View.GONE);
-        b.fabAdd.bringToFront();
-        b.fabAdd.setOnClickListener(ong
-                ? v -> new DialogNovoEvento().show(getParentFragmentManager(), "novo_evento")
-                : null);
-
-        // Empty state: texto e clique variam
-        if (ong) {
-            b.tvEmptySubtitle.setText("Toque em “Nova” para criar seu primeiro evento.");
-            b.emptyState.setClickable(true);
-            b.emptyState.setOnClickListener(v ->
-                    new DialogNovoEvento().show(getParentFragmentManager(), "novo_evento"));
-        } else {
-            b.tvEmptySubtitle.setText("Não há eventos disponíveis no momento.");
-            b.emptyState.setClickable(false);
-            b.emptyState.setOnClickListener(null);
-        }
-    }
-
-    private void hookObservers() {
         vm.list().observe(getViewLifecycleOwner(), list -> {
             boolean empty = list == null || list.isEmpty();
             b.emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
@@ -155,30 +67,101 @@ public class EventosFragment extends Fragment {
         });
     }
 
-    @Override public void onStop() { vm.stop(); super.onStop(); }
+    @Override public void onStart() {
+        super.onStart();
+        decideModeAndStart();
+    }
 
-    // ---- Helpers ----
+    @Override public void onStop() {
+        vm.stop();
+        super.onStop();
+    }
+
+    // ---------- helpers ----------
+
+    private EventListAdapter buildAdapter(boolean asOng) {
+        return new EventListAdapter(new ArrayList<>(), new EventListAdapter.Listener() {
+            @Override public void onInteresse(Event e, boolean add) { /* voluntário usa em outra tela */ }
+            @Override public void onConfirmar(Event e, boolean add) { /* voluntário usa em outra tela */ }
+
+            @Override public void onEditar(Event e) {
+                DialogNovoEvento.newEditDialog(e)
+                        .show(getParentFragmentManager(), "editar_evento");
+            }
+
+            @Override public void onExcluir(Event e) {
+                new AlertDialog.Builder(requireContext())
+                        .setTitle("Excluir evento")
+                        .setMessage("Deseja realmente excluir este evento?")
+                        .setPositiveButton("Excluir", (d, w) -> {
+                            new FirestoreService().deleteEvent(e.id)
+                                    .addOnSuccessListener(v ->
+                                            Toast.makeText(requireContext(), "Evento excluído.", Toast.LENGTH_SHORT).show())
+                                    .addOnFailureListener(err ->
+                                            Toast.makeText(requireContext(), "Erro ao excluir: " + err.getMessage(), Toast.LENGTH_LONG).show());
+                        })
+                        .setNegativeButton("Cancelar", null)
+                        .show();
+            }
+        }, asOng);
+    }
+
+    private void decideModeAndStart() {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) {
+            // Continua no modo voluntário (sem FAB)
+            vm.startAllOpen();
+            return;
+        }
+
+        new FirestoreService().getUserDoc(uid)
+                .addOnSuccessListener((DocumentSnapshot ds) -> {
+                    String type = ds != null ? ds.getString("type") : null;
+                    boolean nowOng = "ONG".equalsIgnoreCase(type);
+                    if (nowOng != isOng) {
+                        // troca a UI apenas se mudou
+                        isOng = nowOng;
+                        setEmptyHint(isOng);
+                        b.fabAdd.setVisibility(isOng ? View.VISIBLE : View.GONE);
+                        adapter = buildAdapter(isOng);
+                        b.recycler.setAdapter(adapter);
+                    }
+                    if (isOng) vm.startMine(uid); else vm.startAllOpen();
+                })
+                .addOnFailureListener(e -> {
+                    // fallback voluntário
+                    isOng = false;
+                    setEmptyHint(false);
+                    b.fabAdd.setVisibility(View.GONE);
+                    adapter = buildAdapter(false);
+                    b.recycler.setAdapter(adapter);
+                    vm.startAllOpen();
+                });
+    }
+
+    private void setEmptyHint(boolean asOng) {
+        if (b == null) return;
+        b.tvEmptyTitle.setText("Nenhum evento ainda");
+        b.tvEmptyHint.setText(asOng
+                ? "Toque em “Nova” para criar seu primeiro evento."
+                : "Nenhum evento disponível no momento.");
+    }
+
     private void adjustForBottomNav() {
         b.getRoot().post(() -> {
             View bottomNav = requireActivity().findViewById(R.id.bottomNav);
             int bottomNavHeight = bottomNav != null ? bottomNav.getHeight() : 0;
 
-            // Margem inferior do FAB para ficar acima do BottomNav
             ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) b.fabAdd.getLayoutParams();
             int m16 = dp(16);
             lp.bottomMargin = bottomNavHeight + m16;
             lp.setMarginEnd(m16);
             b.fabAdd.setLayoutParams(lp);
 
-            // Padding inferior no Recycler para não colidir com FAB/BottomNav
             int fabFootprint = dp(72);
             int padBottom = bottomNavHeight + fabFootprint;
-            b.recycler.setPadding(
-                    b.recycler.getPaddingLeft(),
-                    b.recycler.getPaddingTop(),
-                    b.recycler.getPaddingRight(),
-                    padBottom
-            );
+            b.recycler.setPadding(b.recycler.getPaddingLeft(), b.recycler.getPaddingTop(),
+                    b.recycler.getPaddingRight(), padBottom);
         });
     }
 

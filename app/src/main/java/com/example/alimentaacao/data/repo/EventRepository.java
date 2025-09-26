@@ -107,4 +107,34 @@ public class EventRepository {
         });
     }
 
+    public void listenAllOpen() {
+        stop();
+        reg = fs.listenAllEvents((QuerySnapshot snap, com.google.firebase.firestore.FirebaseFirestoreException err) -> {
+            if (err != null) { return; }
+            java.util.List<Event> out = new java.util.ArrayList<>();
+            if (snap != null) {
+                for (DocumentSnapshot ds : snap.getDocuments()) {
+                    try {
+                        Event e = ds.toObject(Event.class);
+                        if (e != null) {
+                            e.id = ds.getId();
+                            // filtra ENCERRADO
+                            if (e.status != null && "ENCERRADO".equalsIgnoreCase(e.status)) continue;
+                            if (e.interessados == null) e.interessados = new java.util.ArrayList<>();
+                            if (e.confirmados == null)  e.confirmados  = new java.util.ArrayList<>();
+                            out.add(e);
+                        }
+                    } catch (Exception ignored) { }
+                }
+            }
+            java.util.Collections.sort(out, (a,b) -> {
+                long ta = a.dateTime != null ? a.dateTime.getTime()
+                        : (a.createdAt != null ? a.createdAt.getTime() : 0L);
+                long tb = b.dateTime != null ? b.dateTime.getTime()
+                        : (b.createdAt != null ? b.createdAt.getTime() : 0L);
+                return Long.compare(tb, ta);
+            });
+            list.postValue(out);
+        });
+    }
 }
