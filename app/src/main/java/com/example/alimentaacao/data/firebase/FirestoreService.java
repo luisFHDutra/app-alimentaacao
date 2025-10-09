@@ -212,21 +212,20 @@ public class FirestoreService {
     }
 
     // Retorna o tipo do usuário ("ONG" ou "VOLUNTARIO")
-    public com.google.android.gms.tasks.Task<String> getUserType(String uid) {
-        if (uid == null) return com.google.android.gms.tasks.Tasks.forException(
-                new IllegalStateException("uid nulo"));
-        return getUserDoc(uid).continueWith(t -> {
-            com.google.firebase.firestore.DocumentSnapshot ds = t.getResult();
+    public Task<String> getUserType(String uid) {
+        if (uid == null) return Tasks.forResult(null);
+        return users().document(uid).get().continueWith(t -> {
+            if (!t.isSuccessful()) throw t.getException();
+            DocumentSnapshot ds = t.getResult();
             return (ds != null) ? ds.getString("type") : null;
         });
     }
 
     // Escuta todas as solicitações com status ABERTA (para voluntário)
-    public com.google.firebase.firestore.ListenerRegistration listenSolicitationsOpen(
-            com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener
-    ) {
+    public ListenerRegistration listenSolicitationsOpen(EventListener<QuerySnapshot> listener) {
         return solicitations()
                 .whereEqualTo("status", "ABERTA")
+                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener(listener);
     }
 

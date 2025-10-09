@@ -71,7 +71,10 @@ public class DialogNovaSolicitacao extends DialogFragment {
             s.items = Arrays.asList(new Solicitation.Item(itemNome, qtd));
             s.geo = new GeoPoint(-23.55, -46.63); // TODO: geo real
             fs.addSolicitation(s)
-                    .addOnSuccessListener(dr -> toast("Solicitação criada!"))
+                    .addOnSuccessListener(dr -> {
+                        toast("Solicitação criada!");
+                        dismissAllowingStateLoss();
+                    })
                     .addOnFailureListener(e -> toast("Erro: " + e.getMessage()));
         } else {
             // Editar (somente campos simples)
@@ -81,7 +84,10 @@ public class DialogNovaSolicitacao extends DialogFragment {
                             Arrays.asList(new Solicitation.Item(itemNome, qtd)),
                             null,
                             null
-                    ).addOnSuccessListener(v -> toast("Solicitação atualizada!"))
+                    ).addOnSuccessListener(v -> {
+                        toast("Solicitação atualizada!");
+                        dismissAllowingStateLoss();
+                    })
                     .addOnFailureListener(e -> toast("Erro: " + e.getMessage()));
         }
     }
