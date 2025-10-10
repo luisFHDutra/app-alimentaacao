@@ -22,4 +22,8 @@
 
     <!-- Google Sign-In (use o Web client ID do seu google-services.json) -->
     <string name="default_web_client_id">REPLACE_WITH_CLIENT_ID.apps.googleusercontent.com</string>
+
+    <string name="widget_events_label">Próximos eventos</string>
+    <string name="refresh">Atualizar</string>
+
 </resources>

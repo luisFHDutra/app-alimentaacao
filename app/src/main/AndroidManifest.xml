@@ -47,5 +47,29 @@
             android:exported="false"/>
 
         <receiver android:name=".widget.WidgetActionReceiver" android:exported="false" />
+
+        <!-- AppWidgetProvider -->
+        <receiver
+            android:name=".ui.widget.ProximosEventosWidget"
+            android:label="@string/widget_events_label"
+            android:exported="true">
+            <intent-filter>
+                <!-- obrigatório para o launcher listar o widget -->
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <!-- opcional: ação de refresh -->
+                <action android:name="com.example.alimentaacao.ACTION_REFRESH_WIDGET" />
+            </intent-filter>
+
+            <!-- aponta para o XML em res/xml/ -->
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_proximos_eventos_info" />
+        </receiver>
+
+        <service
+            android:name=".ui.widget.ProximosEventosService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
     </application>
 </manifest>

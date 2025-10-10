@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@android:color/white"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- Cabeçalho -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:src="@mipmap/ic_launcher"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="@null"/>
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:text="Próximos eventos"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"/>
+
+        <ImageButton
+            android:id="@+id/btnRefresh"
+            android:src="@android:drawable/ic_popup_sync"
+            android:background="?android:selectableItemBackgroundBorderless"
+            android:contentDescription="Atualizar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"/>
+    </LinearLayout>
+
+    <!-- Linhas de itens (até 3) -->
+    <TextView
+        android:id="@+id/row1"
+        android:text="—"
+        android:layout_marginTop="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <TextView
+        android:id="@+id/row2"
+        android:text=""
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <TextView
+        android:id="@+id/row3"
+        android:text=""
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- Rodapé fraco com dica -->
+    <TextView
+        android:id="@+id/tvFooter"
+        android:text="Toque para abrir"
+        android:textSize="12sp"
+        android:textColor="#7A7A7A"
+        android:layout_marginTop="6dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>
