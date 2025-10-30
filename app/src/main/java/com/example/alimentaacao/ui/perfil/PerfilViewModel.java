@@ -77,4 +77,29 @@ public class PerfilViewModel extends ViewModel {
     }
 
     @Override protected void onCleared() { stop(); super.onCleared(); }
+
+    public void saveProfileEx(String newName, android.net.Uri newPhotoUri,
+                              String city, String uf, Double lat, Double lng) {
+        String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getUid();
+        if (uid == null) { _error.postValue("Usuário não autenticado."); return; }
+        _saving.postValue(true);
+
+        com.google.android.gms.tasks.Task<String> photoTask;
+        if (newPhotoUri != null) {
+            photoTask = new com.example.alimentaacao.data.firebase.StorageService()
+                    .uploadProfilePhoto(uid, newPhotoUri)
+                    .continueWith(t -> t.getResult().toString());
+        } else {
+            photoTask = com.google.android.gms.tasks.Tasks.forResult(null);
+        }
+
+        photoTask
+                .continueWithTask(t -> new com.example.alimentaacao.data.firebase.FirestoreService()
+                        .updateUserProfileEx(uid, newName, t.getResult(), city, uf, lat, lng))
+                .continueWithTask(t -> new com.example.alimentaacao.data.firebase.FirestoreService()
+                        .propagateOngProfileToSolicitations(uid, newName, city, uf, lat, lng))
+                .addOnCompleteListener(t -> _saving.postValue(false))
+                .addOnFailureListener(e -> _error.postValue(e.getMessage()));
+    }
+
 }

@@ -61,6 +61,16 @@ public class SolicitationListAdapter extends RecyclerView.Adapter<SolicitationLi
         void bind(Solicitation s) {
             b.tvTitulo.setText(s.title != null ? s.title : "(sem título)");
 
+            if (b.tvOwnerName != null) {
+                b.tvOwnerName.setText(s.ownerName != null ? s.ownerName : "-");
+            }
+            if (b.tvOwnerLocal != null) {
+                String loc = "";
+                if (s.ownerCity != null) loc += s.ownerCity;
+                if (s.ownerUf != null)   loc += (loc.isEmpty() ? "" : " - ") + s.ownerUf;
+                b.tvOwnerLocal.setText(loc.isEmpty() ? "-" : loc);
+            }
+
             if (s.items != null && !s.items.isEmpty()) {
                 Solicitation.Item it = s.items.get(0);
                 b.tvResumoItens.setText(it.nome + " x" + it.qtd + (s.items.size() > 1 ? " (+)" : ""));

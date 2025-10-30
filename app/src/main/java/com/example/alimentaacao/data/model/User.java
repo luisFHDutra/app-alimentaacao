@@ -17,6 +17,11 @@ public class User {
     @ServerTimestamp public Date createdAt;
     @ServerTimestamp public Date updatedAt;
 
+    public String city;   // ex.: "Lajeado"
+    public String uf;     // ex.: "RS"
+    public Double lat;    // opcional
+    public Double lng;    // opcional
+
     public User() {}
 
     public long createdAtMillis() { return createdAt != null ? createdAt.getTime() : 0L; }

@@ -23,6 +23,21 @@
             android:text="Título"/>
 
         <TextView
+            android:id="@+id/tvOwnerName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp"/>
+
+        <TextView
+            android:id="@+id/tvOwnerLocal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="13sp"/>
+
+        <TextView
             android:id="@+id/tvResumoItens"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -21,6 +21,11 @@ public class Solicitation {
     public List<Item> items;      // Itens solicitados
     public GeoPoint geo;          // Localização da ONG/solicitação (opcional)
 
+    public String ownerName;
+    public String ownerCity;
+    public String ownerUf;
+    public com.google.firebase.firestore.GeoPoint ownerGeo;
+
     @ServerTimestamp public Date createdAt;
     @ServerTimestamp public Date updatedAt;
 

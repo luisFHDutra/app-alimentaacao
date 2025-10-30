@@ -4,7 +4,6 @@ import com.example.alimentaacao.data.model.Event;
 import com.example.alimentaacao.data.model.Solicitation;
 import com.example.alimentaacao.data.model.User;
 import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.CollectionReference;
@@ -39,11 +38,7 @@ public class FirestoreService {
         return users().document(uid);
     }
 
-    /**
-     * Cria ou mescla o documento do usuário logado em users/{uid}.
-     * Usa merge e atualiza updatedAt. createdAt é gerido por @ServerTimestamp no model User
-     * (quando setado pela primeira vez).
-     */
+    /** Cria/mescla users/{uid} com updatedAt. */
     public Task<Void> createOrMergeUser(User u) {
         String uid = (u != null && u.id != null) ? u.id : FirebaseAuth.getInstance().getUid();
         if (uid == null) return Tasks.forException(new IllegalStateException("Usuário não autenticado"));
@@ -55,50 +50,78 @@ public class FirestoreService {
             if (u.photoUrl != null) payload.put("photoUrl", u.photoUrl);
             if (u.type != null)     payload.put("type", u.type);
         }
-        // Não setamos createdAt aqui; @ServerTimestamp no model cobre na criação.
-        payload.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-
+        payload.put("updatedAt", FieldValue.serverTimestamp());
         return users().document(uid).set(payload, SetOptions.merge());
     }
 
-    /** Adiciona uma solicitação, garantindo ownerUid e status padrão. */
+    /** Adiciona solicitação já com dados denormalizados da ONG. */
     public Task<DocumentReference> addSolicitation(Solicitation s) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return Tasks.forException(new IllegalStateException("Usuário não autenticado"));
 
-        if (s == null) s = new Solicitation();
-        if (s.ownerUid == null) s.ownerUid = uid;
-        if (s.status == null)   s.status   = "ABERTA";
+        // Normaliza sem capturar 's' diretamente
+        Solicitation tmp = (s != null) ? s : new Solicitation();
+        if (tmp.ownerUid == null) tmp.ownerUid = uid;
+        if (tmp.status == null)   tmp.status   = "ABERTA";
 
-        // createdAt/updatedAt serão preenchidos pelo @ServerTimestamp no model
-        return solicitations().add(s);
+        // Capturas finais para a lambda
+        final String fUid = uid;
+        final String fTitle = tmp.title;
+        final java.util.List<Solicitation.Item> fItems = tmp.items;
+        final com.google.firebase.firestore.GeoPoint fGeo = tmp.geo;
+        final String fStatus = tmp.status;
+
+        return users().document(fUid).get().continueWithTask(t -> {
+            if (!t.isSuccessful()) throw t.getException();
+            DocumentSnapshot u = t.getResult();
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("ownerUid", fUid);
+            if (fTitle != null) payload.put("title", fTitle);
+            if (fItems != null) payload.put("items", fItems);
+            if (fGeo != null)   payload.put("geo", fGeo);
+            payload.put("status", fStatus);
+
+            // denormalização da ONG
+            payload.put("ownerName", (u != null) ? u.getString("name") : null);
+            payload.put("ownerCity", (u != null) ? u.getString("city") : null);
+            payload.put("ownerUf",   (u != null) ? u.getString("uf")   : null);
+            Double lat = (u != null) ? u.getDouble("lat") : null;
+            Double lng = (u != null) ? u.getDouble("lng") : null;
+            if (lat != null && lng != null) {
+                payload.put("ownerGeo", new com.google.firebase.firestore.GeoPoint(lat, lng));
+            }
+
+            payload.put("createdAt", FieldValue.serverTimestamp());
+            payload.put("updatedAt", FieldValue.serverTimestamp());
+
+            return solicitations().add(payload);
+        });
     }
 
-    /** Escuta em tempo real as solicitações da ONG (ownerUid = uid). */
+    /** Escuta em tempo real as solicitações de uma ONG (ownerUid=uid). */
     public ListenerRegistration listenSolicitationsByOwner(String uid, EventListener<QuerySnapshot> listener) {
-        return solicitations()
-                .whereEqualTo("ownerUid", uid)
-                .addSnapshotListener(listener);
+        return solicitations().whereEqualTo("ownerUid", uid).addSnapshotListener(listener);
     }
 
-    /** Conclui (ATENDIDA) uma solicitação. */
+    /** Conclui uma solicitação. */
     public Task<Void> concludeSolicitation(String solicitationId) {
         Map<String, Object> up = new HashMap<>();
         up.put("status", "ATENDIDA");
-        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        up.put("updatedAt", FieldValue.serverTimestamp());
         return solicitations().document(solicitationId).set(up, SetOptions.merge());
     }
 
-    /** Atualiza status/atendidaPor da solicitação. */
+    /** Atualiza status/atendidaPor. */
     public Task<Void> updateSolicitationStatus(String id, String status, String uid) {
         Map<String, Object> up = new HashMap<>();
         if (status != null) up.put("status", status);
         if (uid != null)    up.put("atendidaPor", uid);
-        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        up.put("updatedAt", FieldValue.serverTimestamp());
         return solicitations().document(id).set(up, SetOptions.merge());
     }
 
-    /** Adiciona um evento (createdAt por @ServerTimestamp no model Event). */
+    /** Adiciona evento. */
     public Task<DocumentReference> addEvent(Event e) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return Tasks.forException(new IllegalStateException("Usuário não autenticado"));
@@ -107,7 +130,7 @@ public class FirestoreService {
         return events().add(e);
     }
 
-    /** Marca/desmarca interesse em um evento. */
+    /** Marca/desmarca interesse. */
     public Task<Void> toggleInteresse(String eventId, String uid, boolean add) {
         com.google.firebase.firestore.FieldValue val =
                 add ? com.google.firebase.firestore.FieldValue.arrayUnion(uid)
@@ -115,7 +138,7 @@ public class FirestoreService {
         return events().document(eventId).update("interessados", val);
     }
 
-    /** Confirma/desconfirma presença em um evento. */
+    /** Confirma/desconfirma presença. */
     public Task<Void> toggleConfirmado(String eventId, String uid, boolean add) {
         com.google.firebase.firestore.FieldValue val =
                 add ? com.google.firebase.firestore.FieldValue.arrayUnion(uid)
@@ -123,72 +146,67 @@ public class FirestoreService {
         return events().document(eventId).update("confirmados", val);
     }
 
-    // Escuta eventos cujo ownerUid == uid (sem orderBy para não exigir índice)
-    public com.google.firebase.firestore.ListenerRegistration listenEventsByOwner(
+    /** Escuta eventos do dono. */
+    public ListenerRegistration listenEventsByOwner(
             String uid,
-            com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener
+            EventListener<QuerySnapshot> listener
     ) {
-        return events()
-                .whereEqualTo("ownerUid", uid)
-                .addSnapshotListener(listener);
+        return events().whereEqualTo("ownerUid", uid).addSnapshotListener(listener);
     }
 
-    // LISTENER: todos os eventos (para aba Mapa)
-    public ListenerRegistration listenAllEvents(
-            com.google.firebase.firestore.EventListener<com.google.firebase.firestore.QuerySnapshot> listener
-    ) {
-        return events().addSnapshotListener(listener); // filtra em memória depois
+    /** Escuta todos os eventos (para o mapa). */
+    public ListenerRegistration listenAllEvents(EventListener<QuerySnapshot> listener) {
+        return events().addSnapshotListener(listener);
     }
 
-    // ATUALIZAR campos do evento (merge)
-    public com.google.android.gms.tasks.Task<Void> updateEvent(
+    /** Atualiza evento (merge). */
+    public Task<Void> updateEvent(
             String eventId, String title, String desc, java.util.Date dateTime, Double lat, Double lng
     ) {
-        java.util.Map<String, Object> up = new java.util.HashMap<>();
-        if (title != null) up.put("title", title);
-        if (desc  != null) up.put("description", desc);
+        Map<String, Object> up = new HashMap<>();
+        if (title != null)   up.put("title", title);
+        if (desc  != null)   up.put("description", desc);
         if (dateTime != null) up.put("dateTime", dateTime);
-        if (lat != null) up.put("lat", lat);
-        if (lng != null) up.put("lng", lng);
-        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        return events().document(eventId).set(up, com.google.firebase.firestore.SetOptions.merge());
+        if (lat != null)     up.put("lat", lat);
+        if (lng != null)     up.put("lng", lng);
+        up.put("updatedAt", FieldValue.serverTimestamp());
+        return events().document(eventId).set(up, SetOptions.merge());
     }
 
-    // EXCLUIR evento
-    public com.google.android.gms.tasks.Task<Void> deleteEvent(String eventId) {
+    /** Exclui evento. */
+    public Task<Void> deleteEvent(String eventId) {
         return events().document(eventId).delete();
     }
 
-    // Atualiza campos da solicitação (merge)
-    public com.google.android.gms.tasks.Task<Void> updateSolicitation(
+    /** Atualiza solicitação (merge). */
+    public Task<Void> updateSolicitation(
             String solicitationId,
             String title,
-            java.util.List<com.example.alimentaacao.data.model.Solicitation.Item> items,
+            java.util.List<Solicitation.Item> items,
             com.google.firebase.firestore.GeoPoint geo,
-            String status // opcional (pode ser null)
+            String status
     ) {
-        java.util.Map<String, Object> up = new java.util.HashMap<>();
+        Map<String, Object> up = new HashMap<>();
         if (title != null) up.put("title", title);
         if (items != null) up.put("items", items);
-        if (geo != null) up.put("geo", geo);
+        if (geo != null)   up.put("geo", geo);
         if (status != null) up.put("status", status);
-        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        return solicitations().document(solicitationId)
-                .set(up, com.google.firebase.firestore.SetOptions.merge());
+        up.put("updatedAt", FieldValue.serverTimestamp());
+        return solicitations().document(solicitationId).set(up, SetOptions.merge());
     }
 
-    // Exclui solicitação
-    public com.google.android.gms.tasks.Task<Void> deleteSolicitation(String solicitationId) {
+    /** Exclui solicitação. */
+    public Task<Void> deleteSolicitation(String solicitationId) {
         return solicitations().document(solicitationId).delete();
     }
 
-    // Atualiza nome e/ou photoUrl do usuário autenticado (merge)
-    public com.google.android.gms.tasks.Task<Void> updateUserProfile(String uid, String name, String photoUrl) {
-        java.util.Map<String, Object> up = new java.util.HashMap<>();
+    /** Atualiza nome/foto básicos do perfil. */
+    public Task<Void> updateUserProfile(String uid, String name, String photoUrl) {
+        Map<String, Object> up = new HashMap<>();
         if (name != null)     up.put("name", name);
         if (photoUrl != null) up.put("photoUrl", photoUrl);
-        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        return users().document(uid).set(up, com.google.firebase.firestore.SetOptions.merge());
+        up.put("updatedAt", FieldValue.serverTimestamp());
+        return users().document(uid).set(up, SetOptions.merge());
     }
 
     public Task<DocumentSnapshot> getUserDoc(String uid) {
@@ -205,13 +223,13 @@ public class FirestoreService {
     }
 
     public Task<Void> setUserType(String uid, String type) {
-        java.util.Map<String, Object> m = new java.util.HashMap<>();
+        Map<String, Object> m = new HashMap<>();
         m.put("type", type);
         m.put("updatedAt", FieldValue.serverTimestamp());
         return users().document(uid).set(m, SetOptions.merge());
     }
 
-    // Retorna o tipo do usuário ("ONG" ou "VOLUNTARIO")
+    /** Retorna tipo do usuário. */
     public Task<String> getUserType(String uid) {
         if (uid == null) return Tasks.forResult(null);
         return users().document(uid).get().continueWith(t -> {
@@ -221,14 +239,15 @@ public class FirestoreService {
         });
     }
 
-    // Escuta todas as solicitações com status ABERTA (para voluntário)
+    /** Lista solicitações abertas (sem índice composto). */
     public ListenerRegistration listenSolicitationsOpen(EventListener<QuerySnapshot> listener) {
         return solicitations()
                 .whereEqualTo("status", "ABERTA")
-//                .orderBy("createdAt", Query.Direction.DESCENDING)
+                // .orderBy("createdAt", Query.Direction.DESCENDING) // exigiria índice
                 .addSnapshotListener(listener);
     }
 
+    /** Upsert respeitando dados existentes do perfil. */
     public Task<Void> upsertUserFromAuthRespectingProfile(com.google.firebase.auth.FirebaseUser fu) {
         if (fu == null) return Tasks.forException(new IllegalStateException("Sem usuário"));
         String uid = fu.getUid();
@@ -236,7 +255,7 @@ public class FirestoreService {
             if (!task.isSuccessful()) return Tasks.forException(task.getException());
             DocumentSnapshot ds = task.getResult();
 
-            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            Map<String, Object> payload = new HashMap<>();
             if (fu.getEmail() != null) payload.put("email", fu.getEmail());
             if (fu.getPhotoUrl() != null) payload.put("photoUrl", fu.getPhotoUrl().toString());
 
@@ -247,26 +266,69 @@ public class FirestoreService {
             }
 
             payload.put("updatedAt", FieldValue.serverTimestamp());
-            if (ds == null || !ds.exists()) {
-                payload.put("createdAt", FieldValue.serverTimestamp());
-            }
-            // NÃO mexa em 'type' aqui!
+            if (ds == null || !ds.exists()) payload.put("createdAt", FieldValue.serverTimestamp());
             return users().document(uid).set(payload, SetOptions.merge());
         });
     }
 
-    public com.google.android.gms.tasks.Task<Void> closeEvent(String eventId) {
-        java.util.Map<String, Object> up = new java.util.HashMap<>();
-        up.put("status", "ENCERRADO");
-        up.put("updatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        return events().document(eventId).set(up, com.google.firebase.firestore.SetOptions.merge());
+    /** Atualiza perfil com cidade/UF/lat/lng. */
+    public Task<Void> updateUserProfileEx(
+            String uid, String name, String photoUrl,
+            String city, String uf, Double lat, Double lng
+    ) {
+        Map<String, Object> up = new HashMap<>();
+        if (name != null)     up.put("name", name);
+        if (photoUrl != null) up.put("photoUrl", photoUrl);
+        if (city != null)     up.put("city", city);
+        if (uf != null)       up.put("uf", uf);
+        if (lat != null)      up.put("lat", lat);
+        if (lng != null)      up.put("lng", lng);
+        up.put("updatedAt", FieldValue.serverTimestamp());
+        return users().document(uid).set(up, SetOptions.merge());
     }
 
-    /** Deleta em lote TUDO que pertence ao ownerUid (eventos + solicitações). */
-    public com.google.android.gms.tasks.Task<Void> deleteAllOwnedContent(String ownerUid) {
+    /** Propaga dados da ONG para solicitações ABERTAS do mesmo ownerUid. */
+    public Task<Void> propagateOngProfileToSolicitations(
+            String ownerUid, String name, String city, String uf, Double lat, Double lng
+    ) {
+        com.google.android.gms.tasks.TaskCompletionSource<Void> tcs = new com.google.android.gms.tasks.TaskCompletionSource<>();
+        solicitations()
+                .whereEqualTo("ownerUid", ownerUid)
+                .whereEqualTo("status", "ABERTA")
+                .get()
+                .addOnSuccessListener(qs -> {
+                    FirebaseFirestore db = FirebaseFirestore.getInstance();
+                    com.google.firebase.firestore.WriteBatch b = db.batch();
+                    for (com.google.firebase.firestore.DocumentSnapshot ds : qs) {
+                        Map<String,Object> up = new HashMap<>();
+                        if (name != null) up.put("ownerName", name);
+                        up.put("ownerCity", city);
+                        up.put("ownerUf", uf);
+                        if (lat != null && lng != null) {
+                            up.put("ownerGeo", new com.google.firebase.firestore.GeoPoint(lat, lng));
+                        }
+                        up.put("updatedAt", FieldValue.serverTimestamp());
+                        b.set(ds.getReference(), up, SetOptions.merge());
+                    }
+                    b.commit().addOnSuccessListener(v -> tcs.setResult(null))
+                            .addOnFailureListener(tcs::setException);
+                })
+                .addOnFailureListener(tcs::setException);
+        return tcs.getTask();
+    }
+
+    /** Encerra evento. */
+    public Task<Void> closeEvent(String eventId) {
+        Map<String, Object> up = new HashMap<>();
+        up.put("status", "ENCERRADO");
+        up.put("updatedAt", FieldValue.serverTimestamp());
+        return events().document(eventId).set(up, SetOptions.merge());
+    }
+
+    /** Deleta em lote conteúdos do dono. */
+    public Task<Void> deleteAllOwnedContent(String ownerUid) {
         com.google.android.gms.tasks.TaskCompletionSource<Void> tcs = new com.google.android.gms.tasks.TaskCompletionSource<>();
 
-        // 1) coletar ids
         java.util.List<String> evIds = new java.util.ArrayList<>();
         java.util.List<String> soIds = new java.util.ArrayList<>();
 
@@ -285,8 +347,7 @@ public class FirestoreService {
                             soIds.add(ds.getId());
                         }
                     }
-                    // 2) deletar em lotes de até 500
-                    java.util.List<com.google.android.gms.tasks.Task<Void>> batchTasks = new java.util.ArrayList<>();
+                    java.util.List<Task<Void>> batchTasks = new java.util.ArrayList<>();
                     for (int i = 0; i < evIds.size(); i += 400) {
                         com.google.firebase.firestore.WriteBatch b = FirebaseFirestore.getInstance().batch();
                         for (int j = i; j < Math.min(i + 400, evIds.size()); j++) {
@@ -301,7 +362,7 @@ public class FirestoreService {
                         }
                         batchTasks.add(b.commit());
                     }
-                    return com.google.android.gms.tasks.Tasks.whenAll(batchTasks);
+                    return Tasks.whenAll(batchTasks);
                 })
                 .addOnSuccessListener(v -> tcs.setResult(null))
                 .addOnFailureListener(tcs::setException);
