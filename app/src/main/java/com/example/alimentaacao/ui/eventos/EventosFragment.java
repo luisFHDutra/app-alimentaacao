@@ -143,8 +143,6 @@ public class EventosFragment extends Fragment {
         androidx.recyclerview.widget.RecyclerView.Adapter a = b.recycler.getAdapter();
         if (a instanceof com.example.alimentaacao.ui.eventos.EventListAdapter) {
             // percorrer rapidamente os itens já carregados
-            // (se preferir, mova a lista para o VM/Repo e consulte de lá)
-            // aqui, como não temos acesso direto, volte -1 e deixe o snapshot atualizar
         }
         return -1;
     }
