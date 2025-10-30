@@ -225,7 +225,7 @@ public class FirestoreService {
     public ListenerRegistration listenSolicitationsOpen(EventListener<QuerySnapshot> listener) {
         return solicitations()
                 .whereEqualTo("status", "ABERTA")
-                .orderBy("createdAt", Query.Direction.DESCENDING)
+//                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener(listener);
     }
 

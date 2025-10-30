@@ -80,30 +80,73 @@ public class EventosFragment extends Fragment {
     // ---------- helpers ----------
 
     private EventListAdapter buildAdapter(boolean asOng) {
-        return new EventListAdapter(new ArrayList<>(), new EventListAdapter.Listener() {
-            @Override public void onInteresse(Event e, boolean add) { /* voluntário usa em outra tela */ }
-            @Override public void onConfirmar(Event e, boolean add) { /* voluntário usa em outra tela */ }
-
-            @Override public void onEditar(Event e) {
-                DialogNovoEvento.newEditDialog(e)
-                        .show(getParentFragmentManager(), "editar_evento");
+        return new EventListAdapter(new java.util.ArrayList<>(), new EventListAdapter.Listener() {
+            @Override public void onInteresse(com.example.alimentaacao.data.model.Event e, boolean ignored) {
+                if (asOng) return; // ONG não usa RSVP aqui
+                String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getUid();
+                if (uid == null) {
+                    android.widget.Toast.makeText(requireContext(), "Faça login para registrar interesse.", android.widget.Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                boolean add = (e.interessados == null) || !e.interessados.contains(uid);
+                // opcional: UI otimista (incrementa localmente até o snapshot chegar)
+                if (e.interessados != null) {
+                    java.util.List<String> tmp = new java.util.ArrayList<>(e.interessados);
+                    if (add) { tmp.add(uid); } else { tmp.remove(uid); }
+                    e.interessados = tmp;
+                    b.recycler.getAdapter().notifyItemChanged(getAdapterPositionOf(e));
+                }
+                // efetiva no Firestore
+                vm.toggleInteresse(e.id, uid, add);
             }
 
-            @Override public void onExcluir(Event e) {
-                new AlertDialog.Builder(requireContext())
+            @Override public void onConfirmar(com.example.alimentaacao.data.model.Event e, boolean ignored) {
+                if (asOng) return;
+                String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getUid();
+                if (uid == null) {
+                    android.widget.Toast.makeText(requireContext(), "Faça login para confirmar presença.", android.widget.Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                boolean add = (e.confirmados == null) || !e.confirmados.contains(uid);
+                // opcional: UI otimista
+                if (e.confirmados != null) {
+                    java.util.List<String> tmp = new java.util.ArrayList<>(e.confirmados);
+                    if (add) { tmp.add(uid); } else { tmp.remove(uid); }
+                    e.confirmados = tmp;
+                    b.recycler.getAdapter().notifyItemChanged(getAdapterPositionOf(e));
+                }
+                vm.toggleConfirmado(e.id, uid, add);
+            }
+
+            @Override public void onEditar(com.example.alimentaacao.data.model.Event e) {
+                DialogNovoEvento.newEditDialog(e).show(getParentFragmentManager(), "editar_evento");
+            }
+
+            @Override public void onExcluir(com.example.alimentaacao.data.model.Event e) {
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                         .setTitle("Excluir evento")
                         .setMessage("Deseja realmente excluir este evento?")
                         .setPositiveButton("Excluir", (d, w) -> {
-                            new FirestoreService().deleteEvent(e.id)
+                            new com.example.alimentaacao.data.firebase.FirestoreService().deleteEvent(e.id)
                                     .addOnSuccessListener(v ->
-                                            Toast.makeText(requireContext(), "Evento excluído.", Toast.LENGTH_SHORT).show())
+                                            android.widget.Toast.makeText(requireContext(), "Evento excluído.", android.widget.Toast.LENGTH_SHORT).show())
                                     .addOnFailureListener(err ->
-                                            Toast.makeText(requireContext(), "Erro ao excluir: " + err.getMessage(), Toast.LENGTH_LONG).show());
+                                            android.widget.Toast.makeText(requireContext(), "Erro ao excluir: " + err.getMessage(), android.widget.Toast.LENGTH_LONG).show());
                         })
                         .setNegativeButton("Cancelar", null)
                         .show();
             }
         }, asOng);
+    }
+
+    private int getAdapterPositionOf(com.example.alimentaacao.data.model.Event e) {
+        androidx.recyclerview.widget.RecyclerView.Adapter a = b.recycler.getAdapter();
+        if (a instanceof com.example.alimentaacao.ui.eventos.EventListAdapter) {
+            // percorrer rapidamente os itens já carregados
+            // (se preferir, mova a lista para o VM/Repo e consulte de lá)
+            // aqui, como não temos acesso direto, volte -1 e deixe o snapshot atualizar
+        }
+        return -1;
     }
 
     private void decideModeAndStart() {
