@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:fillViewport="true"
     android:clipToPadding="false"
+    android:paddingTop="64dp"
     android:paddingBottom="96dp">
 
     <LinearLayout
@@ -15,7 +16,6 @@
         android:gravity="center_horizontal"
         android:padding="16dp">
 
-        <!-- Avatar -->
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/imgAvatar"
             android:layout_width="120dp"
@@ -31,7 +31,6 @@
             android:text="Alterar foto"
             android:layout_marginTop="12dp"/>
 
-        <!-- Nome -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -43,7 +42,6 @@
                 android:layout_height="wrap_content"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Email (read-only) -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -55,7 +53,6 @@
                 android:layout_height="wrap_content"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Tipo (read-only) -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -67,7 +64,6 @@
                 android:layout_height="wrap_content"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Cidade -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -79,7 +75,6 @@
                 android:inputType="textCapWords"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- UF -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -92,7 +87,6 @@
                 android:inputType="textCapCharacters"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Botão de definir localização (sem exibir Lat/Lng) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDefinirLocalizacao"
             style="@style/Widget.Material3.Button.OutlinedButton"
@@ -101,7 +95,6 @@
             android:text="Definir localização"
             android:layout_marginTop="8dp"/>
 
-        <!-- Ações: Editar / Salvar / Cancelar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -132,20 +125,29 @@
                 android:visibility="gone"/>
         </LinearLayout>
 
-        <!-- Ações de conta -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSair"
-            android:text="Sair da conta"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/rowAccountActions"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"/>
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="28dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnExcluirConta"
-            android:text="Excluir conta"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="?attr/colorError"
-            android:layout_marginTop="8dp"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnExcluirConta"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:text="Excluir conta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="?attr/colorError"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSair"
+                android:text="Sair da conta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
