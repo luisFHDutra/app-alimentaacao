@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.alimentaacao.R;
 import com.example.alimentaacao.data.firebase.FirestoreService;
 import com.example.alimentaacao.data.model.Event;
 import com.example.alimentaacao.databinding.ItemEventoBinding;
@@ -19,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
-/** Adapter da lista de eventos (exibe nome da ONG dona do evento). */
+/** Adapter da lista de eventos (com botão "Ver no mapa"). */
 public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> {
 
     interface Listener {
@@ -31,10 +32,10 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> 
 
     private final Listener l;
     private final boolean isOng;                 // ONG vê Editar/Excluir; voluntário vê RSVP
-    private final @Nullable String myUid;        // reservado p/ usos futuros (ex.: destacar meus RSVPs)
+    private final @Nullable String myUid;        // reservado p/ usos futuros
     private final List<Event> data = new ArrayList<>();
 
-    // Cache simples (ownerUid -> ownerName) para evitar ler o mesmo usuário várias vezes
+    // Cache simples (ownerUid -> ownerName) — se você habilitar exibição do nome da ONG no layout
     private final HashMap<String, String> ownerNameCache = new HashMap<>();
     private final FirestoreService fs = new FirestoreService();
 
@@ -79,10 +80,26 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> 
         int nc = (e.confirmados != null) ? e.confirmados.size() : 0;
         h.b.tvCounters.setText(ni + " interessados • " + nc + " confirmados");
 
-        // === Nome da ONG (dono do evento) ===
-        setOwnerNameAsync(h, e.ownerUid);
+        // Clique "Ver no mapa" — abre MainActivity na aba de Mapa centralizando no evento
+        h.b.btnVerNoMapa.setOnClickListener(v -> {
+            Double la = e.lat;
+            Double ln = e.lng;
+            if (la == null || ln == null) {
+                android.widget.Toast.makeText(v.getContext(), "Evento sem localização", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            android.content.Context c = v.getContext();
+            android.content.Intent i = new android.content.Intent(
+                    c, com.example.alimentaacao.ui.MainActivity.class)
+                    .putExtra("open_tab", R.id.nav_mapa)
+                    .putExtra("focus_lat", la)
+                    .putExtra("focus_lng", ln)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                            | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            c.startActivity(i);
+        });
 
-        // === Ações ===
+        // Ações variam por perfil
         if (isOng) {
             h.b.rowActions.setVisibility(View.VISIBLE);
             h.b.rowRsvp.setVisibility(View.GONE);
@@ -106,42 +123,20 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> 
 
     @Override public int getItemCount() { return data.size(); }
 
-    /** Preenche tvOwnerName buscando em cache ou no Firestore (com proteção a reciclagem). */
+    // (Opcional) Buscar nome da ONG — só use se tiver um TextView correspondente no layout
     private void setOwnerNameAsync(@NonNull VH h, @Nullable String ownerUid) {
-        if (h.b.tvOwnerName == null) return; // caso o layout antigo ainda esteja em algum build
-        if (ownerUid == null || ownerUid.isEmpty()) {
-            h.b.tvOwnerName.setText("-");
-            h.b.tvOwnerName.setTag(null);
-            return;
-        }
+        // Se quiser exibir, adicione um TextView no layout e chame aqui.
+        if (ownerUid == null || ownerUid.isEmpty()) return;
 
-        // se está no cache, usa direto
-        if (ownerNameCache.containsKey(ownerUid)) {
-            h.b.tvOwnerName.setText(ownerNameCache.get(ownerUid));
-            h.b.tvOwnerName.setTag(ownerUid);
-            return;
-        }
+        if (ownerNameCache.containsKey(ownerUid)) return;
 
-        // placeholder e tag para checar reciclagem depois
-        h.b.tvOwnerName.setText("Carregando…");
-        h.b.tvOwnerName.setTag(ownerUid);
-
-        fs.getUserDoc(ownerUid).addOnSuccessListener((DocumentSnapshot ds) -> {
-            String name = (ds != null) ? ds.getString("name") : null;
-            if (name == null || name.trim().isEmpty()) name = "ONG";
-            ownerNameCache.put(ownerUid, name);
-
-            // Só aplica se o holder ainda está representando o mesmo ownerUid
-            Object tag = h.b.tvOwnerName.getTag();
-            if (tag != null && ownerUid.equals(tag.toString())) {
-                h.b.tvOwnerName.setText(name);
-            }
-        }).addOnFailureListener(err -> {
-            Object tag = h.b.tvOwnerName.getTag();
-            if (tag != null && ownerUid.equals(tag.toString())) {
-                h.b.tvOwnerName.setText("ONG");
-            }
-        });
+        fs.getUserDoc(ownerUid)
+                .addOnSuccessListener((DocumentSnapshot ds) -> {
+                    String name = (ds != null) ? ds.getString("name") : null;
+                    if (name == null || name.trim().isEmpty()) name = "ONG";
+                    ownerNameCache.put(ownerUid, name);
+                })
+                .addOnFailureListener(err -> { /* ignora */ });
     }
 
     static class VH extends RecyclerView.ViewHolder {

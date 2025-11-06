@@ -22,16 +22,6 @@
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             android:text="Título"/>
 
-        <!-- Novo: nome da ONG (dono do evento) -->
-        <TextView
-            android:id="@+id/tvOwnerName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="-"
-            android:textSize="13sp"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:layout_marginTop="2dp"/>
-
         <TextView
             android:id="@+id/tvDesc"
             android:layout_width="match_parent"
@@ -53,6 +43,7 @@
             android:text="0 interessados • 0 confirmados"
             android:paddingTop="4dp"/>
 
+        <!-- Ações da ONG (editar/excluir/ver no mapa, todos na mesma linha) -->
         <LinearLayout
             android:id="@+id/rowActions"
             android:layout_width="wrap_content"
@@ -74,9 +65,17 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnVerNoMapa"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:text="Ver no mapa"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"/>
         </LinearLayout>
 
-        <!-- botões RSVP (somente para voluntário; ONG não verá) -->
+        <!-- RSVP do voluntário -->
         <LinearLayout
             android:id="@+id/rowRsvp"
             android:layout_width="wrap_content"
