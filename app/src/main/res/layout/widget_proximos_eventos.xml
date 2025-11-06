@@ -3,7 +3,8 @@
     android:orientation="vertical"
     android:padding="12dp"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="@android:color/white">
 
     <!-- Cabeçalho -->
     <LinearLayout
@@ -22,6 +23,7 @@
             android:id="@+id/tvTitle"
             android:text="@string/widget_events_label"
             android:textStyle="bold"
+            android:textColor="@android:color/black"
             android:layout_marginStart="8dp"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -36,21 +38,24 @@
             android:layout_height="36dp" />
     </LinearLayout>
 
-    <!-- Linhas dos próximos eventos (clicáveis individualmente) -->
+    <!-- Linhas dos próximos eventos -->
     <TextView
         android:id="@+id/tvLine1"
         android:text="Carregando…"
+        android:textColor="@android:color/black"
         android:layout_marginTop="8dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <TextView
         android:id="@+id/tvLine2"
+        android:textColor="@android:color/black"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <TextView
         android:id="@+id/tvLine3"
+        android:textColor="@android:color/black"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 </LinearLayout>
