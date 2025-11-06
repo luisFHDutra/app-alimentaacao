@@ -26,6 +26,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.IOException;
@@ -37,6 +38,11 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
     private FragmentMapaBinding b;
     private GoogleMap map;
     private MapaViewModel vm;
+
+    // foco vindo do widget (pode chegar antes do mapa estar pronto)
+    private LatLng focoPendente = null;
+    private Marker marcadorFoco = null;
+    private static final float ZOOM_FOCO = 14f;
 
     // ---------- view/binding ----------
     @Nullable
@@ -58,25 +64,47 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
         super.onViewCreated(v, s);
         vm = new ViewModelProvider(this).get(MapaViewModel.class);
 
-        // Markers vindos do Firestore
+        // 1) Markers vindos do Firestore
         vm.events().observe(getViewLifecycleOwner(), list -> {
             if (map == null) return;
             map.clear();
-            for (Event e : list) {
-                if (e.lat != null && e.lng != null) {
-                    LatLng p = new LatLng(e.lat, e.lng);
-                    map.addMarker(new MarkerOptions().position(p).title(e.title));
+            marcadorFoco = null; // será recriado se houver foco
+            if (list != null) {
+                for (Event e : list) {
+                    if (e.lat != null && e.lng != null) {
+                        LatLng p = new LatLng(e.lat, e.lng);
+                        map.addMarker(new MarkerOptions().position(p).title(e.title));
+                    }
                 }
+            }
+            // re-aplica foco visual se existir um foco pendente
+            if (focoPendente != null) {
+                aplicarFoco(focoPendente);
             }
         });
 
-        // Barra de busca
+        // 2) Recebe foco vindo da MainActivity (widget)
+        getParentFragmentManager().setFragmentResultListener(
+                "focus_on_map",
+                getViewLifecycleOwner(),
+                (requestKey, bundle) -> {
+                    double lat = bundle.getDouble("focus_lat", Double.NaN);
+                    double lng = bundle.getDouble("focus_lng", Double.NaN);
+                    if (!Double.isNaN(lat) && !Double.isNaN(lng)) {
+                        LatLng p = new LatLng(lat, lng);
+                        if (map != null) aplicarFoco(p);
+                        else focoPendente = p;
+                    }
+                }
+        );
+
+        // 3) Barra de busca
         setupSearchBar();
 
-        // Garantir que a barra fique acima do mapa
+        // 4) Garantir que a barra fique acima do mapa
         b.searchContainer.bringToFront();
 
-        // Empurra a barra para baixo do status bar
+        // 5) Empurra a barra para baixo do status bar
         ViewCompat.setOnApplyWindowInsetsListener(b.getRoot(), (view, insets) -> {
             Insets status = insets.getInsets(WindowInsetsCompat.Type.statusBars());
             ViewGroup.MarginLayoutParams lp =
@@ -88,6 +116,20 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
+    // Centraliza câmera e coloca/atualiza um marcador de foco
+    private void aplicarFoco(@NonNull LatLng alvo) {
+        if (map == null) {
+            focoPendente = alvo;
+            return;
+        }
+        focoPendente = null;
+        if (marcadorFoco != null) marcadorFoco.remove();
+        marcadorFoco = map.addMarker(new MarkerOptions()
+                .position(alvo)
+                .title("Próximo evento"));
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(alvo, ZOOM_FOCO));
+    }
+
     private void setupSearchBar() {
         final EditText et = b.etSearch;
         final ImageButton btn = b.btnSearch;
@@ -95,7 +137,7 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
         et.setOnEditorActionListener((tv, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 String q = et.getText() != null ? et.getText().toString().trim() : "";
-                if (!q.isEmpty()) geocodeAndCenter(q);
+                if (!q.isEmpty()) geocodificarECentralizar(q);
                 return true;
             }
             return false;
@@ -103,11 +145,11 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
 
         btn.setOnClickListener(v -> {
             String q = et.getText() != null ? et.getText().toString().trim() : "";
-            if (!q.isEmpty()) geocodeAndCenter(q);
+            if (!q.isEmpty()) geocodificarECentralizar(q);
         });
     }
 
-    private void geocodeAndCenter(String query) {
+    private void geocodificarECentralizar(String query) {
         if (map == null) return;
         new Thread(() -> {
             try {
@@ -120,7 +162,7 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
                     if (isAdded()) {
                         requireActivity().runOnUiThread(() -> {
                             LatLng p = new LatLng(lat, lng);
-                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(p, 12f));
+                            aplicarFoco(p);
                         });
                     }
                 } else if (isAdded()) {
@@ -144,6 +186,12 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
     @Override public void onLowMemory(){ super.onLowMemory(); if (b != null) b.mapView.onLowMemory(); }
 
     @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (b != null) b.mapView.onSaveInstanceState(outState);
+    }
+
+    @Override
     public void onDestroyView() {
         if (b != null) {
             b.mapView.onDestroy();
@@ -157,6 +205,13 @@ public class MapaFragment extends Fragment implements OnMapReadyCallback {
     public void onMapReady(GoogleMap gMap) {
         MapsInitializer.initialize(requireContext());
         map = gMap;
+
+        // Configuração básica da câmera (fallback)
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(-23.55, -46.63), 11f));
+
+        // Se já havia um foco pendente (ex.: veio do widget antes de onMapReady)
+        if (focoPendente != null) {
+            aplicarFoco(focoPendente);
+        }
     }
 }

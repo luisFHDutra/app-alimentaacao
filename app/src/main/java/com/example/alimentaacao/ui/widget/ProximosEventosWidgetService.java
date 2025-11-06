@@ -32,7 +32,9 @@ public class ProximosEventosWidgetService extends RemoteViewsService {
         String title;
         Date   dateTime;
         String ownerUid;
-        String ownerName; // pode vir nulo
+        String ownerName; // opcional
+        Double lat;
+        Double lng;
     }
 
     static class Factory implements RemoteViewsService.RemoteViewsFactory {
@@ -40,13 +42,9 @@ public class ProximosEventosWidgetService extends RemoteViewsService {
         private final ArrayList<Row> rows = new ArrayList<>();
         private final SimpleDateFormat df = new SimpleDateFormat("EEE, dd/MM HH:mm", new java.util.Locale("pt", "BR"));
 
-        Factory(Context ctx) {
-            this.ctx = ctx;
-        }
+        Factory(Context ctx) { this.ctx = ctx; }
 
-        @Override public void onCreate() {
-            // nada
-        }
+        @Override public void onCreate() { }
 
         @Override
         public void onDataSetChanged() {
@@ -62,13 +60,10 @@ public class ProximosEventosWidgetService extends RemoteViewsService {
                 if (uid != null) {
                     DocumentSnapshot userDoc = Tasks.await(db.collection("users").document(uid).get());
                     String type = userDoc != null ? userDoc.getString("type") : null;
-                    if ("ONG".equalsIgnoreCase(type)) {
-                        mode = "ONG";
-                    }
+                    if ("ONG".equalsIgnoreCase(type)) mode = "ONG";
                 }
 
                 if ("ONG".equals(mode) && fu != null) {
-                    // Sem orderBy para evitar índice composto; ordena em memória
                     QuerySnapshot qs = Tasks.await(
                             db.collection("events")
                                     .whereEqualTo("ownerUid", fu.getUid())
@@ -76,19 +71,19 @@ public class ProximosEventosWidgetService extends RemoteViewsService {
                     );
                     for (DocumentSnapshot ds : qs) {
                         Date dt = ds.getDate("dateTime");
-                        if (dt == null || dt.before(now)) continue; // apenas futuros
+                        if (dt == null || dt.before(now)) continue;
                         Row r = new Row();
                         r.id = ds.getId();
                         r.title = safe(ds.getString("title"));
                         r.dateTime = dt;
                         r.ownerUid = ds.getString("ownerUid");
-                        r.ownerName = ds.getString("ownerName"); // se você passar a denormalizar
+                        r.ownerName = ds.getString("ownerName");
+                        r.lat = ds.getDouble("lat");
+                        r.lng = ds.getDouble("lng");
                         rows.add(r);
                     }
-                    // ordena por data ascendente
                     Collections.sort(rows, Comparator.comparing(a -> a.dateTime));
                 } else {
-                    // "públicos"/abertos: futuros ordenados por data (sem índice composto)
                     QuerySnapshot qs = Tasks.await(
                             db.collection("events")
                                     .whereGreaterThan("dateTime", now)
@@ -102,17 +97,16 @@ public class ProximosEventosWidgetService extends RemoteViewsService {
                         r.title = safe(ds.getString("title"));
                         r.dateTime = ds.getDate("dateTime");
                         r.ownerUid = ds.getString("ownerUid");
-                        r.ownerName = ds.getString("ownerName"); // opcional
+                        r.ownerName = ds.getString("ownerName");
+                        r.lat = ds.getDouble("lat");
+                        r.lng = ds.getDouble("lng");
                         rows.add(r);
                     }
                 }
-            } catch (Exception ignored) {
-                // Se der erro, mantém lista vazia (empty view aparece)
-            }
+            } catch (Exception ignored) { }
         }
 
         @Override public void onDestroy() { rows.clear(); }
-
         @Override public int getCount() { return rows.size(); }
 
         @Override
@@ -124,17 +118,17 @@ public class ProximosEventosWidgetService extends RemoteViewsService {
             item.setTextViewText(R.id.tvItemTitle, nonEmpty(r.title, "(sem título)"));
 
             String sub = df.format(r.dateTime != null ? r.dateTime : new Date());
-            if (!TextUtils.isEmpty(r.ownerName)) {
-                sub = sub + " • " + r.ownerName;
-            }
+            if (!TextUtils.isEmpty(r.ownerName)) sub = sub + " • " + r.ownerName;
             item.setTextViewText(R.id.tvItemSubtitle, sub);
 
-            // Prepara intenção de clique (usa PendingIntentTemplate definido no Provider)
+            // Clique da linha -> abrir aba Mapa já focada nas coords
             Intent fillIn = new Intent();
-            fillIn.putExtra("open_tab", R.id.nav_eventos);
-            fillIn.putExtra("event_id", r.id);
-            item.setOnClickFillInIntent(R.id.tvItemTitle, fillIn);
+            fillIn.putExtra("open_tab", R.id.nav_mapa);
+            if (r.lat != null) fillIn.putExtra("focus_lat", r.lat);
+            if (r.lng != null) fillIn.putExtra("focus_lng", r.lng);
+            fillIn.putExtra("event_id", r.id); // opcional, se quiser usar depois
 
+            item.setOnClickFillInIntent(R.id.root, fillIn);
             return item;
         }
 
